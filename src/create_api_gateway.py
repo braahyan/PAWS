@@ -1,10 +1,4 @@
-# AWS Version 4 signing example
-
-# EC2 API (DescribeRegions)
-
-# See: http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html
-# This version makes a GET request and passes the signature
-# in the Authorization header.
+from __future__ import print_function
 import sys
 import os
 import datetime
@@ -12,6 +6,11 @@ import hashlib
 import hmac
 import requests
 
+# AWS Version 4 signing example
+
+# See: http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html
+# This version makes a GET request and passes the signature
+# in the Authorization header.
 
 # Key derivation functions. See:
 # http://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html#signature-v4-examples-python
@@ -34,14 +33,14 @@ def sign_request(method='get',
                  host='apigateway.us-east-1.amazonaws.com',
                  region='us-east-1',
                  request_parameters='',
-                 canonical_uri='/restapis'):
+                 canonical_uri='/'):
     endpoint = "https://" + host + canonical_uri
     # Read AWS access key from env. variables or configuration file.
     # Best practice is NOT to embed credentials in code.
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key is None or secret_key is None:
-        print 'No access key is available.'
+        print('No access key is available.')
         sys.exit()
 
     # Create a date for headers and the credential string
@@ -121,3 +120,7 @@ def sign_request(method='get',
     request_url = endpoint + '?' + canonical_querystring
     r = requests.__dict__[method](request_url, headers=headers)
     return r.json()
+
+if __name__ == '__main__':
+    import pprint
+    pprint.pprint(sign_request())
