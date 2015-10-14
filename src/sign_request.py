@@ -95,9 +95,6 @@ def sign_request(method='post',
         '/' + service + '/' + 'aws4_request'
     string_to_sign = algorithm + '\n' + amzdate + '\n' + credential_scope + \
         '\n' + hashlib.sha256(canonical_request).hexdigest()
-    print(string_to_sign)
-    print("\nthis thing is a seperator\n")
-    print(canonical_request)
 
     # ************* TASK 3: CALCULATE THE SIGNATURE *************
     # Create the signing key using the function defined above.
@@ -131,6 +128,10 @@ def sign_request(method='post',
         request_url += '?' + canonical_querystring
     if method == "delete":
         r = requests.delete(request_url, headers=headers)
+    elif method == "get":
+        r = requests.get(request_url, headers=headers)
+    elif method == "put":
+        r = requests.put(request_url, headers=headers, data=request_body)
     else:
         r = requests.post(request_url, headers=headers, data=request_body)
     return r
