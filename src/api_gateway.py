@@ -5,6 +5,31 @@ import datetime
 import hashlib
 import hmac
 import requests
+import json
+
+
+def create_api(name):
+    resp = sign_request(method='post',
+                        canonical_uri='/restapis',
+                        request_body={"name": name,
+                                      "cloneFrom": None,
+                                      "description": None})
+    return resp.json()["self"]["restApiId"]
+
+
+def delete_api(id):
+    resp = sign_request(method='delete',
+                        canonical_uri="/restapis/{0}".format(id))
+    return resp
+
+
+def create_resource(api_id, parent_id, name):
+    url = "/restapis/{0}/resources/{1}".format(api_id, parent_id)
+    print(url)
+    return sign_request(method='post',
+                        request_body={"pathPart": name},
+                        canonical_uri=url)
+
 
 # AWS Version 4 signing example
 
@@ -28,18 +53,21 @@ def getSignatureKey(key, dateStamp, regionName, serviceName):
     return kSigning
 
 
-def sign_request(method='get',
+def sign_request(method='post',
                  service='apigateway',
                  host='apigateway.us-east-1.amazonaws.com',
                  region='us-east-1',
-                 request_parameters='',
-                 canonical_uri='/'):
+                 request_parameters="",
+                 request_body=None,
+                 canonical_uri='/restapis'):
+    request_body = json.dumps(request_body) if request_body else ""
     endpoint = "https://" + host + canonical_uri
     # Read AWS access key from env. variables or configuration file.
     # Best practice is NOT to embed credentials in code.
     access_key = os.environ.get('AWS_ACCESS_KEY_ID')
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key is None or secret_key is None:
+        # TODO: replace with a throw
         print('No access key is available.')
         sys.exit()
 
@@ -77,7 +105,7 @@ def sign_request(method='get',
 
     # Step 6: Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ("").
-    payload_hash = hashlib.sha256('').hexdigest()
+    payload_hash = hashlib.sha256(request_body).hexdigest()
 
     # Step 7: Combine elements to create create canonical request
     canonical_request = method.upper() + '\n' + canonical_uri + '\n' + canonical_querystring + \
@@ -91,6 +119,9 @@ def sign_request(method='get',
         '/' + service + '/' + 'aws4_request'
     string_to_sign = algorithm + '\n' + amzdate + '\n' + credential_scope + \
         '\n' + hashlib.sha256(canonical_request).hexdigest()
+    print(string_to_sign)
+    print("\nthis thing is a seperator\n")
+    print(canonical_request)
 
     # ************* TASK 3: CALCULATE THE SIGNATURE *************
     # Create the signing key using the function defined above.
@@ -117,10 +148,16 @@ def sign_request(method='get',
     headers = {'x-amz-date': amzdate, 'Authorization': authorization_header}
 
     # ************* SEND THE REQUEST *************
-    request_url = endpoint + '?' + canonical_querystring
-    r = requests.__dict__[method](request_url, headers=headers)
-    return r.json()
+    request_url = endpoint
+    if canonical_querystring:
+        request_url += '?' + canonical_querystring
+    if method == "delete":
+        r = requests.delete(request_url, headers=headers)
+    else:
+        r = requests.post(request_url, headers=headers, data=request_body)
+    return r
 
 if __name__ == '__main__':
-    import pprint
-    pprint.pprint(sign_request())
+    #import pprint
+    # pprint.pprint(create_api("barbaz"))
+    pass
