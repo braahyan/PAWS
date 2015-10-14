@@ -84,7 +84,8 @@ def sign_request(method='post',
     # Step 2: Create canonical URI--the part of the URI from domain to query
     # string (use '/' if no path)
 
-    # Step 3: Create the canonical query string. In this example (a GET request),
+    # Step 3: Create the canonical query string.
+    # In this example (a GET request),
     # request parameters are in the query string. Query string values must
     # be URL-encoded (space=%20). The parameters must be sorted by name.
     # For this example, the query string is pre-formatted in the
@@ -108,7 +109,8 @@ def sign_request(method='post',
     payload_hash = hashlib.sha256(request_body).hexdigest()
 
     # Step 7: Combine elements to create create canonical request
-    canonical_request = method.upper() + '\n' + canonical_uri + '\n' + canonical_querystring + \
+    canonical_request = method.upper() + '\n' + canonical_uri + \
+        '\n' + canonical_querystring + \
         '\n' + canonical_headers + '\n' + signed_headers + '\n' + payload_hash
 
     # ************* TASK 2: CREATE THE STRING TO SIGN*************
@@ -129,17 +131,19 @@ def sign_request(method='post',
 
     # Sign the string_to_sign using the signing_key
     signature = hmac.new(
-        signing_key, (string_to_sign).encode('utf-8'), hashlib.sha256).hexdigest()
+        signing_key, (string_to_sign).encode('utf-8'),
+        hashlib.sha256).hexdigest()
 
     # ************* TASK 4: ADD SIGNING INFORMATION TO THE REQUEST ***********
     # The signing information can be either in a query string value or in
     # a header named Authorization. This code shows how to use a header.
     # Create authorization header and add to request headers
-    authorization_header = algorithm + ' ' + 'Credential=' + access_key + '/' + \
-        credential_scope + ', ' + 'SignedHeaders=' + \
+    authorization_header = algorithm + ' ' + 'Credential=' + access_key + '/' \
+        + credential_scope + ', ' + 'SignedHeaders=' + \
         signed_headers + ', ' + 'Signature=' + signature
 
-    # The request can include any headers, but MUST include "host", "x-amz-date",
+    # The request can include any headers,
+    # but MUST include "host", "x-amz-date",
     # and (for this scenario) "Authorization". "host" and "x-amz-date" must
     # be included in the canonical_headers and signed_headers, as noted
     # earlier. Order here is not significant.
