@@ -1,0 +1,5 @@
+export AWS_ACCESS_KEY_ID=__YOUR_ACCESS_KEY_HERE__
+export AWS_SECRET_ACCESS_KEY=__YOUR_SECRET_ACCESS_KEY_HERE__
+export AWS_ROLE_ARN=__YOUR_AWS_USER_ARN__
+
+The AWS role supplied above must have a trust policy set up that has a trust relationship with both Lambda and API Gateway, additionally, it should have the "lambda:InvokeFunction" permission associated with it.
