@@ -1,7 +1,22 @@
 from lambda_client import upload
-import api_gateway
+from api_gateway import ApiGatewayConnection
 import os
 from argparse import ArgumentParser
+
+
+def get_path_segments(path):
+    parts = filter(None, path.split("/"))
+    return parts
+
+
+def create_resource_path(api_id, parent_id, path):
+    segments = get_path_segments(args.path)
+    for segment in segments:
+        create_resource_resp = api_connection.create_resource(
+            api_id, parent_id, segment)
+        resource_json = create_resource_resp.json()
+        parent_id = resource_json["id"]
+    return parent_id
 
 
 parser = ArgumentParser(description=str('Create a single endpoint with a '
@@ -21,6 +36,14 @@ args = parser.parse_args()
 
 # this role will require the AWSLambdaRole role
 creds_arn = os.environ.get('AWS_ROLE_ARN')
+access_key = os.environ.get('AWS_ACCESS_KEY_ID')
+secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+
+if not creds_arn or not access_key or not secret_key:
+    raise Exception("Critical information is missing")
+
+api_connection = ApiGatewayConnection(access_key, secret_key)
+
 resp = upload(args.function_name, open(args.zip),
               creds_arn,
               args.handler)
@@ -31,27 +54,24 @@ gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
                            '/2015-03-31/functions/{0}/invocations').format(
     function_arn)
 
-api_resp = api_gateway.create_api(args.api_name)
+api_resp = api_connection.create_api(args.api_name)
 
 api_id = api_resp["api_id"]
 parent_id = api_resp["parent_id"]
 
-create_resource_resp = api_gateway.create_resource(
-    api_id, parent_id, "test")
+parent_id = create_resource_path(api_id, parent_id, args.path)
 
-resource_json = create_resource_resp.json()
+create_method_resp = api_connection.create_method(
+    api_id, parent_id, "get")
 
-create_method_resp = api_gateway.create_method(
-    api_id, resource_json["id"], "get")
-
-create_resource_integration = api_gateway.create_integration(
-    api_id, resource_json["id"], "get", gateway_function_arn,
+create_resource_integration = api_connection.create_integration(
+    api_id, parent_id, "get", gateway_function_arn,
     creds_arn)
 
-create_integration_response = api_gateway.create_integration_response(
-    api_id, resource_json["id"], "get", 200)
+create_integration_response = api_connection.create_integration_response(
+    api_id, parent_id, "get", 200)
 
-create_response = api_gateway.create_method_response(
-    api_id, resource_json["id"], "get", 200)
+create_response = api_connection.create_method_response(
+    api_id, parent_id, "get", 200)
 
-create_deployment = api_gateway.create_deployment(api_id, args.path)
+create_deployment = api_connection.create_deployment(api_id, "test")

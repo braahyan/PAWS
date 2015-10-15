@@ -1,5 +1,3 @@
-import sys
-import os
 import datetime
 import hashlib
 import hmac
@@ -26,8 +24,12 @@ def getSignatureKey(key, dateStamp, regionName, serviceName):
     kSigning = sign(kService, 'aws4_request')
     return kSigning
 
+# todo: make url constructed based on service and region
 
-def sign_request(method='post',
+
+def sign_request(access_key,
+                 secret_key,
+                 method='post',
                  service='apigateway',
                  host='apigateway.us-east-1.amazonaws.com',
                  region='us-east-1',
@@ -38,12 +40,9 @@ def sign_request(method='post',
     endpoint = "https://" + host + canonical_uri
     # Read AWS access key from env. variables or configuration file.
     # Best practice is NOT to embed credentials in code.
-    access_key = os.environ.get('AWS_ACCESS_KEY_ID')
-    secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if access_key is None or secret_key is None:
         # TODO: replace with a throw
-        print('No access key is available.')
-        sys.exit()
+        raise Exception("No access key or secret available")
 
     # Create a date for headers and the credential string
     t = datetime.datetime.utcnow()
