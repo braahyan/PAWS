@@ -78,7 +78,7 @@ def create_integration(api_id, resource_id, http_method, uri, credentials):
     ).format(api_id, resource_id, http_method.upper())
     return sign_request(canonical_uri=url, method='put', request_body={
         "type": "AWS",
-        "httpMethod": http_method.upper(),
+        "httpMethod": "POST",
         "uri": uri,
         "credentials": credentials,
         "requestParameters": {
@@ -107,6 +107,7 @@ def create_method_response(api_id, resource_id, http_method, status_code):
                             "responseParameters": {
                             },
                             "responseModels": {
+                                "application/json": "Empty"
                             }
                         })
 
@@ -116,6 +117,22 @@ def get_method_response(api_id, resource_id, http_method, status_code):
         api_id, resource_id, http_method.upper(), status_code)
     return sign_request(method="get",
                         canonical_uri=url)
+
+
+def create_integration_response(api_id, resource_id, http_method, status_code):
+    url = str("/restapis/{0}/resources/{1}/methods/"
+              "{2}/integration/responses/{3}").format(
+        api_id, resource_id, http_method.upper(), status_code)
+    return sign_request(method="put",
+                        canonical_uri=url,
+                        request_body={
+                            "selectionPattern": None,
+                            "responseParameters": {
+                            },
+                            "responseTemplates": {
+                                "application/json": ""
+                            }
+                        })
 
 
 def create_deployment(api_id, stage_name,
