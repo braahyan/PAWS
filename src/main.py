@@ -50,9 +50,10 @@ def create_integrations_and_responses(api_connection, api_id, parent_id,
 
 parser = ArgumentParser(description=str('Create a single endpoint with a '
                                         'lambda function set up to serve'))
-parser.add_argument("--path", nargs=5,
+parser.add_argument("--path", nargs=6,
                     metavar=('PATH_NAME', 'ZIP_PATH',
-                             'FUNCTION_NAME', 'HANDLER_NAME', 'CREDS_ARN'),
+                             'FUNCTION_NAME', 'HANDLER_NAME', 'CREDS_ARN',
+                             'HTTP_METHOD'),
                     type=str, required=True, default=[],
                     help="path segment to upload to aws", action='append')
 
@@ -84,6 +85,7 @@ for path_info in args.path:
     function_name = path_info[2]
     handler_name = path_info[3]
     creds_arn = path_info[4]
+    method = path_info[5]
 
     resp = upload(function_name, open(zip_path),
                   creds_arn,
@@ -100,6 +102,6 @@ for path_info in args.path:
         api_connection, api_id, parent_id, path)
 
     create_integrations_and_responses(
-        api_connection, api_id, parent_id, gateway_function_arn)
+        api_connection, api_id, parent_id, gateway_function_arn, method=method)
 
 print("We worked on {0}".format(api_id))
