@@ -1,6 +1,5 @@
 export AWS_ACCESS_KEY_ID=__YOUR_ACCESS_KEY_HERE__
 export AWS_SECRET_ACCESS_KEY=__YOUR_SECRET_ACCESS_KEY_HERE__
-export AWS_ROLE_ARN=__YOUR_AWS_USER_ARN__
 
 The AWS access key needs permissions to administer the account. Right now I have only tested with the administrator access role, but will be updating this as I gain a greater understanding of the AWS permissions model.
 
@@ -9,8 +8,8 @@ The AWS role supplied above must have a trust policy set up that has a trust rel
 
 
 example main invocation.
-python main.py --api_name foobar --path /test main.zip asdf main.lambda_handler --path /test2 main2.zip asdf2 main.lambda_handler
+python main.py --api_name foobar --path /test main.zip asdf main.lambda_handler --path /test2 main2.zip asdf2 main.lambda_handler __aws_role_for_lambda__
 
 
 example update invocation.
-python main.py --api_id 782gr8gmnb --path /test main.zip asdf main.lambda_handler --path /test2 main2.zip asdf2 main.lambda_handler
+python main.py --api_id 782gr8gmnb --path /test main.zip asdf main.lambda_handler --path /test2 main2.zip asdf2 main.lambda_handler __aws_role_for_lambda__

@@ -50,17 +50,12 @@ def create_integrations_and_responses(api_connection, api_id, parent_id,
 
 parser = ArgumentParser(description=str('Create a single endpoint with a '
                                         'lambda function set up to serve'))
-# parser.add_argument('--zip', type=str, required=True,
-#                    help='path to the zip file to upload to lambda')
-# parser.add_argument("--function_name", type=str, required=True,
-#                    help="name of the lambda function to upload")
-parser.add_argument("--path", nargs=4,
+parser.add_argument("--path", nargs=5,
                     metavar=('PATH_NAME', 'ZIP_PATH',
-                             'FUNCTION_NAME', 'HANDLER_NAME'),
+                             'FUNCTION_NAME', 'HANDLER_NAME', 'CREDS_ARN'),
                     type=str, required=True, default=[],
                     help="path segment to upload to aws", action='append')
-# parser.add_argument("--handler", type=str, required=True,
-#                    help="path to your python lambda handler")
+
 group = parser.add_mutually_exclusive_group()
 group.add_argument("--api_id", type=str, help="the api you wish to update")
 group.add_argument("--api_name", type=str,
@@ -69,11 +64,10 @@ group.add_argument("--api_name", type=str,
 args = parser.parse_args()
 
 # this role will require the AWSLambdaRole role
-creds_arn = os.environ.get('AWS_ROLE_ARN')
 access_key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
-if not creds_arn or not access_key or not secret_key:
+if not access_key or not secret_key:
     raise Exception("Critical information is missing")
 
 api_connection = ApiGatewayConnection(access_key, secret_key)
@@ -89,6 +83,7 @@ for path_info in args.path:
     zip_path = path_info[1]
     function_name = path_info[2]
     handler_name = path_info[3]
+    creds_arn = path_info[4]
 
     resp = upload(function_name, open(zip_path),
                   creds_arn,
