@@ -9,4 +9,7 @@ The AWS role supplied above must have a trust policy set up that has a trust rel
 
 
 example main invocation.
-python main.py --zip main.zip --function_name testfunction --api_name test_api --path /test/foo/bar/baz --handler main.lambda_handler
+python main.py --zip main.zip --function_name testfunction --path /test/foo/bar/baz --handler main.lambda_handler --api_name test_api
+
+example update invocation -
+python main.py --zip main.zip --function_name testfunction --path /test/foo/bar/baz --handler main.lambda_handler --api_id __SOME_RESTAPI_ID__
