@@ -50,21 +50,32 @@ def create_integrations_and_responses(api_connection, api_id, parent_id,
 
 parser = ArgumentParser(description=str('Create a single endpoint with a '
                                         'lambda function set up to serve'))
-parser.add_argument("--path", nargs=6,
-                    metavar=('PATH_NAME', 'ZIP_PATH',
-                             'FUNCTION_NAME', 'HANDLER_NAME', 'CREDS_ARN',
-                             'HTTP_METHOD'),
-                    type=str, required=True, default=[],
-                    help="path segment to upload to aws", action='append')
 
-group = parser.add_mutually_exclusive_group()
-group.add_argument("--api_id", type=str, help="the api you wish to update")
-group.add_argument("--api_name", type=str,
-                   help="name of the new api to create")
+definition_group = parser.add_mutually_exclusive_group(required=True)
+
+definition_group.add_argument("--path", nargs=6,
+                              metavar=('PATH_NAME', 'ZIP_PATH',
+                                       'FUNCTION_NAME', 'HANDLER_NAME',
+                                       'CREDS_ARN', 'HTTP_METHOD'),
+                              type=str, default=[],
+                              help="path segment to upload to aws",
+                              action='append')
+definition_group.add_argument(
+    "--conf", type=str, default=None,
+    help="YAML or JSON swagger config describing your API")
+
+api_group = parser.add_mutually_exclusive_group(required=True)
+api_group.add_argument(
+    "--api_id", type=str, help="the api you wish to update")
+api_group.add_argument("--api_name", type=str,
+                       help="name of the new api to create")
 
 args = parser.parse_args()
 
-# this role will require the AWSLambdaRole role
+if args.conf:
+    raise Exception("We don't support this yet, sorry!")
+
+# this role will require the AWSLambdaRole rolel
 access_key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
@@ -90,6 +101,7 @@ for path_info in args.path:
     resp = upload(function_name, open(zip_path),
                   creds_arn,
                   handler_name)
+
     function_arn = resp["FunctionARN"]
     # rebuild this string concat so that respects region
     gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
