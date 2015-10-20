@@ -22,9 +22,7 @@ class ApiGatewayConnection:
                             request_body={"name": name,
                                           "cloneFrom": None,
                                           "description": None})
-        body = resp.json()
-        return {"api_id": body["resourceCreate"]["restApiId"],
-                "parent_id": body["resourceCreate"]["parentId"]}
+        return resp
 
     def get_apis(self):
         resp = sign_request(self.access_key,
@@ -38,16 +36,14 @@ class ApiGatewayConnection:
                             self.secret_key,
                             method='get',
                             canonical_uri='/restapis/{0}'.format(api_id))
-        body = resp.json()
-        return {"api_id": body["resourceCreate"]["restApiId"],
-                "parent_id": body["resourceCreate"]["parentId"]}
+        return resp
 
     def delete_api(self, api_id):
         resp = sign_request(self.access_key,
                             self.secret_key,
                             method='delete',
                             canonical_uri="/restapis/{0}".format(api_id))
-        return resp.status_code == 200 or resp.status_code == 202
+        return resp
 
     def get_resources(self, api_id):
         resp = sign_request(self.access_key,
@@ -55,7 +51,7 @@ class ApiGatewayConnection:
                             method='get',
                             canonical_uri='/restapis/{0}/resources'.format(
                                 api_id))
-        return resp.json()
+        return resp
 
     def get_resource(self, api_id, resource_id):
         url = "/restapis/{0}/resources/{1}".format(api_id,
