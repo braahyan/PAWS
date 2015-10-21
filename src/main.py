@@ -86,6 +86,34 @@ if args.conf:
                  method.upper(),
                  spec["paths"][path_name][method]["parameters"]])
 
+
+def create_request_mapping_template(parameters):
+    query_params_collection = [
+        x for x in parameters if x['in'] in ['query', 'path', 'header']]
+    values_dictionary = dict((x["name"], "$input.params('{0}')".format(
+        x["name"])) for x in query_params_collection)
+    body_params_collection = [
+        x for x in parameters if x['in'] in ['body']]
+    if len(body_params_collection) == 1:
+        values_dictionary[
+            body_params_collection[0]['name']] = "$input.json('$')"
+    elif len(body_params_collection) > 1:
+        raise Exception("there can only be one body parameter per swagger def")
+    return json.dumps(values_dictionary)
+
+
+def create_integration_request(api_id, parent_id, method,
+                               gateway_function_arn, creds_arn, content_type,
+                               parameters):
+    query_params_collection = create_request_mapping_template(parameters)
+    mapping_templates = {}
+    mapping_templates[content_type] = query_params_collection
+
+    api_connection.create_integration(
+        api_id, parent_id, method, gateway_function_arn,
+        creds_arn, mapping_templates)
+
+
 # this role will require the AWSLambdaRole role
 access_key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
@@ -108,8 +136,10 @@ for path_info in path_infos:
     handler_name = path_info[3]
     creds_arn = path_info[4]
     method = path_info[5]
+    parameters = path_info[6]
     status_code = 200
     content_type = "application/json"
+    stage_name = "test"
 
     resp = upload(function_name, open(zip_path),
                   creds_arn,
@@ -128,21 +158,15 @@ for path_info in path_infos:
     api_connection.create_method(
         api_id, parent_id, method)
 
-    query_params_collection = [x for x in path_info[6] if x['in'] == "query"]
-    mapping_templates = {}
-    mapping_template = dict((x["name"], "$input.params('{0}')".format(
-        x["name"])) for x in query_params_collection)
-
-    mapping_templates[content_type] = json.dumps(mapping_template)
-
-    api_connection.create_integration(
-        api_id, parent_id, method, gateway_function_arn,
-        creds_arn, mapping_templates)
+    create_integration_request(api_id, parent_id, method,
+                               gateway_function_arn, creds_arn, content_type,
+                               parameters)
 
     api_connection.create_integration_response(
         api_id, parent_id, method, status_code)
     api_connection.create_method_response(
         api_id, parent_id, method, status_code)
-    api_connection.create_deployment(api_id, "test")
+    api_connection.create_deployment(api_id, stage_name)
+
 
 print("We worked on {0}".format(api_id))
