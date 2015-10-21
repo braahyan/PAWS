@@ -92,7 +92,8 @@ class ApiGatewayConnection:
                             method="get", canonical_uri=url)
 
     def create_integration(self, api_id, resource_id,
-                           http_method, uri, credentials):
+                           http_method, uri, credentials,
+                           content_mapping_templates={}):
         url = str(
             "/restapis/{0}/resources/"
             "{1}/methods/{2}/integration"
@@ -106,8 +107,7 @@ class ApiGatewayConnection:
                                 "credentials": credentials,
                                 "requestParameters": {
                                 },
-                                "requestTemplates": {
-                                },
+                                "requestTemplates": content_mapping_templates,
                                 "cacheNamespace": "none",
                                 "cacheKeyParameters": []
                             })

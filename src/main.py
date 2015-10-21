@@ -27,7 +27,7 @@ def create_resource_path(api_connection, api_id, path):
     cur_path = "/"
     for segment in segments:
         cur_path += segment
-        # see if we've already created the endpolint we're
+        # see if we've already created the endpoint we're
         # looking for
         previous_created_resource = None if not is_resource_list else next(
             (x for x in resources['_embedded']['item'] if x['path'] == cur_path
@@ -46,35 +46,10 @@ def create_resource_path(api_connection, api_id, path):
     return parent_id
 
 
-def create_integrations_and_responses(api_connection, api_id, parent_id,
-                                      gateway_function_arn, method="get",
-                                      status_code=200):
-    api_connection.create_method(
-        api_id, parent_id, method)
-    api_connection.create_integration(
-        api_id, parent_id, method, gateway_function_arn,
-        creds_arn)
-    api_connection.create_integration_response(
-        api_id, parent_id, method, status_code)
-    api_connection.create_method_response(
-        api_id, parent_id, method, status_code)
-    api_connection.create_deployment(api_id, "test")
-
-
-parser = ArgumentParser(description=str('Create a single endpoint with a '
-                                        'lambda function set up to serve'))
-
-definition_group = parser.add_mutually_exclusive_group(required=True)
-
-definition_group.add_argument("--path", nargs=6,
-                              metavar=('PATH_NAME', 'ZIP_PATH',
-                                       'FUNCTION_NAME', 'HANDLER_NAME',
-                                       'CREDS_ARN', 'HTTP_METHOD'),
-                              type=str, default=[],
-                              help="path segment to upload to aws",
-                              action='append')
-definition_group.add_argument(
-    "--conf", type=str, default=None,
+parser = ArgumentParser(description=str('deploy an api to AWS lambda '
+                                        'and API Gateway'))
+parser.add_argument(
+    "--conf", type=str, default=None, required=True,
     help="YAML or JSON swagger config describing your API")
 
 api_group = parser.add_mutually_exclusive_group(required=True)
@@ -98,21 +73,20 @@ if args.conf:
     elif "json" in load_str:
         spec = json.loads(body)
     validate(spec, schema_object)
+    produces = spec["produces"]
     path_infos = []
     for path_name in spec["paths"]:
         for method in spec["paths"][path_name].keys():
             path_infos.append(
                 [path_name,
                  spec["paths"][path_name][method]["x-zip-path"],
-                 spec["paths"][path_name][method]["x-lambda-name"],
+                 spec["paths"][path_name][method]["operationId"],
                  spec["paths"][path_name][method]["x-handler-name"],
                  spec["paths"][path_name][method]["x-role-arn"],
-                 method.upper()])
+                 method.upper(),
+                 spec["paths"][path_name][method]["parameters"]])
 
-else:
-    path_infos = args.path
-
-# this role will require the AWSLambdaRole rolel
+# this role will require the AWSLambdaRole role
 access_key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
@@ -134,6 +108,8 @@ for path_info in path_infos:
     handler_name = path_info[3]
     creds_arn = path_info[4]
     method = path_info[5]
+    status_code = 200
+    content_type = "application/json"
 
     resp = upload(function_name, open(zip_path),
                   creds_arn,
@@ -149,7 +125,24 @@ for path_info in path_infos:
     parent_id = create_resource_path(
         api_connection, api_id, path)
 
-    create_integrations_and_responses(
-        api_connection, api_id, parent_id, gateway_function_arn, method=method)
+    api_connection.create_method(
+        api_id, parent_id, method)
+
+    query_params_collection = [x for x in path_info[6] if x['in'] == "query"]
+    mapping_templates = {}
+    mapping_template = dict((x["name"], "$input.params('{0}')".format(
+        x["name"])) for x in query_params_collection)
+
+    mapping_templates[content_type] = json.dumps(mapping_template)
+
+    api_connection.create_integration(
+        api_id, parent_id, method, gateway_function_arn,
+        creds_arn, mapping_templates)
+
+    api_connection.create_integration_response(
+        api_id, parent_id, method, status_code)
+    api_connection.create_method_response(
+        api_id, parent_id, method, status_code)
+    api_connection.create_deployment(api_id, "test")
 
 print("We worked on {0}".format(api_id))
