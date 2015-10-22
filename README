@@ -8,8 +8,8 @@ The AWS role supplied above must have a trust policy set up that has a trust rel
 
 
 example main invocation.
-python main.py --api_name foobar --path /test main.zip asdf main.lambda_handler __arn_for_lambda/gateway_user__ POST
+python main.py --api_name foobar --conf swagger.yaml
 
 
 example update invocation.
-python main.py --api_id 782gr8gmnb --path /test main.zip asdf main.lambda_handler __arn_for_lambda/gateway_user__ POST
+python main.py --api_id 782gr8gmnb --conf swagger.yaml
