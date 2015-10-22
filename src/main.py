@@ -46,6 +46,53 @@ def create_resource_path(api_connection, api_id, path):
     return parent_id
 
 
+def create_request_mapping_template(parameters):
+    mapping_template = """#set($params = $input.params())
+#set($path = $params.path)
+#set($querystring = $params.querystring)
+#set($headers = $params.header)
+#set($body = $input.json('$'))
+
+{
+"path" : {
+    #foreach ($mapEntry in $path.entrySet())
+        "$mapEntry.key":"$mapEntry.value"
+        #if($velocityCount < $path.size()),#end
+    #end
+    },
+"querystring" : {
+    #foreach ($mapEntry in $querystring.entrySet())
+        "$mapEntry.key":"$mapEntry.value"
+        #if($velocityCount < $querystring.size()),#end
+    #end
+    },
+"headers" : {
+    #foreach ($mapEntry in $headers.entrySet())
+        "$mapEntry.key":"$mapEntry.value"
+        #if($velocityCount < $headers.size()),#end
+    #end
+    }
+
+    #if("$!body" != ""),
+"body": $body
+#end
+}"""
+
+    return mapping_template
+
+
+def create_integration_request(api_id, parent_id, method,
+                               gateway_function_arn, creds_arn, content_type,
+                               parameters):
+    query_params_collection = create_request_mapping_template(parameters)
+    mapping_templates = {}
+    mapping_templates[content_type] = query_params_collection
+
+    api_connection.create_integration(
+        api_id, parent_id, method, gateway_function_arn,
+        creds_arn, mapping_templates)
+
+
 parser = ArgumentParser(description=str('deploy an api to AWS lambda '
                                         'and API Gateway'))
 parser.add_argument(
@@ -85,33 +132,6 @@ if args.conf:
                  spec["paths"][path_name][method]["x-role-arn"],
                  method.upper(),
                  spec["paths"][path_name][method]["parameters"]])
-
-
-def create_request_mapping_template(parameters):
-    query_params_collection = [
-        x for x in parameters if x['in'] in ['query', 'path', 'header']]
-    values_dictionary = dict((x["name"], "$input.params('{0}')".format(
-        x["name"])) for x in query_params_collection)
-    body_params_collection = [
-        x for x in parameters if x['in'] in ['body']]
-    if len(body_params_collection) == 1:
-        values_dictionary[
-            body_params_collection[0]['name']] = "$input.json('$')"
-    elif len(body_params_collection) > 1:
-        raise Exception("there can only be one body parameter per swagger def")
-    return json.dumps(values_dictionary)
-
-
-def create_integration_request(api_id, parent_id, method,
-                               gateway_function_arn, creds_arn, content_type,
-                               parameters):
-    query_params_collection = create_request_mapping_template(parameters)
-    mapping_templates = {}
-    mapping_templates[content_type] = query_params_collection
-
-    api_connection.create_integration(
-        api_id, parent_id, method, gateway_function_arn,
-        creds_arn, mapping_templates)
 
 
 # this role will require the AWSLambdaRole role
