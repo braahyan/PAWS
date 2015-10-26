@@ -107,31 +107,34 @@ api_group.add_argument("--api_name", type=str,
 
 args = parser.parse_args()
 
-if args.conf:
-    load_str = args.conf
-    with open("schema.json") as schema_file:
-        schema_text = schema_file.read()
-        schema_object = json.loads(schema_text)
-    with open(load_str) as foo:
-        body = foo.read()
-    if "yaml" in load_str:
-        # hack to make schema work, likely related to unicode
-        spec = json.loads(json.dumps(yaml.load(body)))
-    elif "json" in load_str:
-        spec = json.loads(body)
-    validate(spec, schema_object)
-    produces = spec["produces"]
-    path_infos = []
-    for path_name in spec["paths"]:
-        for method in spec["paths"][path_name].keys():
-            path_infos.append(
-                [path_name,
-                 spec["paths"][path_name][method]["x-zip-path"],
-                 spec["paths"][path_name][method]["operationId"],
-                 spec["paths"][path_name][method]["x-handler-name"],
-                 spec["paths"][path_name][method]["x-role-arn"],
-                 method.upper(),
-                 spec["paths"][path_name][method]["parameters"]])
+load_str = args.conf
+real_path = os.path.dirname(__file__)
+with open(real_path + "/schema.json") as schema_file:
+    schema_text = schema_file.read()
+    schema_object = json.loads(schema_text)
+with open(load_str) as foo:
+    body = foo.read()
+if "yaml" in load_str:
+    # hack to make schema work, likely related to unicode
+    spec = json.loads(json.dumps(yaml.load(body)))
+elif "json" in load_str:
+    spec = json.loads(body)
+validate(spec, schema_object)
+base_src_path = spec['x-application-root']
+produces = spec["produces"]
+path_infos = []
+for path_name in spec["paths"]:
+    for method in spec["paths"][path_name].keys():
+        path_infos.append(
+            [path_name,
+             spec["paths"][path_name][method][
+                 "x-zip-path"] if "x-zip-path"
+             in spec["paths"][path_name][method] else None,
+             spec["paths"][path_name][method]["operationId"],
+             spec["paths"][path_name][method]["x-handler-name"],
+             spec["paths"][path_name][method]["x-role-arn"],
+             method.upper(),
+             spec["paths"][path_name][method]["parameters"]])
 
 
 # this role will require the AWSLambdaRole role
@@ -161,11 +164,14 @@ for path_info in path_infos:
     content_type = "application/json"
     stage_name = "test"
 
-    with open(zip_path) as zip_file:
-        resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
-                      zip_file,
-                      creds_arn,
-                      handler_name)
+    if zip_path:
+        with open(zip_path) as zip_file:
+            resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
+                          zip_file,
+                          creds_arn,
+                          handler_name)
+    else:
+        raise Exception("Not Implemented yet")
 
     function_arn = resp["FunctionARN"]
     # rebuild this string concat so that respects region
