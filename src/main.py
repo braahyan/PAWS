@@ -161,9 +161,11 @@ for path_info in path_infos:
     content_type = "application/json"
     stage_name = "test"
 
-    resp = upload(function_name, open(zip_path),
-                  creds_arn,
-                  handler_name)
+    with open(zip_path) as zip_file:
+        resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
+                      zip_file,
+                      creds_arn,
+                      handler_name)
 
     function_arn = resp["FunctionARN"]
     # rebuild this string concat so that respects region
