@@ -13,3 +13,12 @@ python main.py --api_name foobar --conf swagger.yaml
 
 example update invocation.
 python main.py --api_id 782gr8gmnb --conf swagger.yaml
+
+
+*Roadmap*
+
+- CodeGen of Python Models
+- Python Validation Framework using Swagger definition
+- Static asset hosting on S3/CloudFront
+- domain management via Route53
+- support for AWSM modules
