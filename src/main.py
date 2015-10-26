@@ -5,6 +5,17 @@ from argparse import ArgumentParser
 import json
 import yaml
 from jsonschema import validate
+import zipfile
+
+
+def zipdir(path, out_path):
+    with zipfile.ZipFile(out_path, 'w') as ziph:
+        for root, dirs, files in os.walk(path):
+            for fn in files:
+                absfn = os.path.join(root, fn)
+                zfn = absfn[len(path):]  # XXX: relative path
+                ziph.write(absfn, zfn)
+    return out_path
 
 
 def get_path_segments(path):
@@ -46,7 +57,7 @@ def create_resource_path(api_connection, api_id, path):
     return parent_id
 
 
-def create_request_mapping_template(parameters):
+def create_request_mapping_template():
     mapping_template = """#set($params = $input.params())
 #set($path = $params.path)
 #set($querystring = $params.querystring)
@@ -84,7 +95,7 @@ def create_request_mapping_template(parameters):
 def create_integration_request(api_id, parent_id, method,
                                gateway_function_arn, creds_arn, content_type,
                                parameters):
-    query_params_collection = create_request_mapping_template(parameters)
+    query_params_collection = create_request_mapping_template()
     mapping_templates = {}
     mapping_templates[content_type] = query_params_collection
 
@@ -108,8 +119,10 @@ api_group.add_argument("--api_name", type=str,
 args = parser.parse_args()
 
 load_str = args.conf
-real_path = os.path.dirname(__file__)
-with open(real_path + "/schema.json") as schema_file:
+script_directory = os.path.dirname(__file__)
+if script_directory:
+    script_directory += "/"
+with open(script_directory + "schema.json") as schema_file:
     schema_text = schema_file.read()
     schema_object = json.loads(schema_text)
 with open(load_str) as foo:
@@ -120,8 +133,7 @@ if "yaml" in load_str:
 elif "json" in load_str:
     spec = json.loads(body)
 validate(spec, schema_object)
-base_src_path = spec['x-application-root']
-produces = spec["produces"]
+produces = spec["produces"]  # this is a list
 path_infos = []
 for path_name in spec["paths"]:
     for method in spec["paths"][path_name].keys():
@@ -164,14 +176,22 @@ for path_info in path_infos:
     content_type = "application/json"
     stage_name = "test"
 
-    if zip_path:
-        with open(zip_path) as zip_file:
-            resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
-                          zip_file,
-                          creds_arn,
-                          handler_name)
-    else:
-        raise Exception("Not Implemented yet")
+    if not zip_path:
+        app_root = spec['x-application-root']
+        if app_root[-1] != "/":
+            app_root += "/"
+        zipdir(app_root, "main.zip")
+        zip_path = "main.zip"
+
+    with open(zip_path) as zip_file:
+        resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
+                      zip_file,
+                      creds_arn,
+                      handler_name)
+
+    if app_root:
+        # os.remove(zip_path)
+        pass
 
     function_arn = resp["FunctionARN"]
     # rebuild this string concat so that respects region
