@@ -1,5 +1,79 @@
 Pardon my mess, PAWS is still in heavy development.
 
+PAWS uses a config language that is an extension of swagger. Here is a very simple PAWS yaml example:
+
+
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: PAWS TODO
+  description: A sample API that implements a simple todo app for PAWS
+  termsOfService: 'http://helloreverb.com/terms/'
+  contact:
+    name: Bryan Pedlar
+    email: foo@example.com
+    url: 'http://thrivehive.com'
+  license:
+    name: MIT
+    url: 'http://opensource.org/licenses/MIT'
+host: todo.thrivehive.com
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+x-application-root: src
+paths:
+  /todos:
+    get:
+      x-handler-name: main.get_todos
+      x-role-arn: __your_lambda_api_gateway_role-arn_here__
+      description: Returns all todos from the system that the user has access to
+      operationId: getTodos
+      parameters:
+        - name: limit
+          in: query
+          description: maximum number of results to return
+          required: false
+          type: integer
+          format: int32
+      responses:
+        '200':
+          description: todo response
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/todo'
+        default:
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/errorModel'
+definitions:
+  todo:
+    type: object
+    required:
+      - id
+      - name
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+  errorModel:
+    type: object
+    required:
+      - code
+      - message
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+
+
+
 export AWS_ACCESS_KEY_ID=__YOUR_ACCESS_KEY_HERE__
 export AWS_SECRET_ACCESS_KEY=__YOUR_SECRET_ACCESS_KEY_HERE__
 
