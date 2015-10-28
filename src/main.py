@@ -25,23 +25,19 @@ def get_path_segments(path):
 
 def create_resource_path(api_connection, api_id, path):
     segments = get_path_segments(path)
-    resources = api_connection.get_resources(api_id).json()
-    is_resource_list = isinstance(resources['_embedded']['item'], list)
-    if is_resource_list:
-        parent_id = next(
-            (x for x in resources['_embedded']
-             ['item'] if x['path'] == '/'),
-            None)['id']
-    else:
-        parent_id = resources['_embedded']['item']['id']
+    resources = api_connection.get_resources(api_id)
+
+    parent_id = next(
+        (x for x in resources['items'] if x['path'] == '/'),
+        None)['id']
 
     cur_path = "/"
     for segment in segments:
         cur_path += segment
         # see if we've already created the endpoint we're
         # looking for
-        previous_created_resource = None if not is_resource_list else next(
-            (x for x in resources['_embedded']['item'] if x['path'] == cur_path
+        previous_created_resource = next(
+            (x for x in resources['items'] if x['path'] == cur_path
              and x['parentId'] == parent_id), None)
 
         if previous_created_resource:
@@ -49,7 +45,7 @@ def create_resource_path(api_connection, api_id, path):
         else:
             create_resource_resp = api_connection.create_resource(
                 api_id, parent_id, segment)
-            resource_json = create_resource_resp.json()
+            resource_json = create_resource_resp
 
         parent_id = resource_json["id"]
         cur_path += "/"
@@ -95,9 +91,8 @@ def create_request_mapping_template():
 def create_integration_request(api_id, parent_id, method,
                                gateway_function_arn, creds_arn, content_type,
                                parameters):
-    query_params_collection = create_request_mapping_template()
     mapping_templates = {}
-    mapping_templates[content_type] = query_params_collection
+    mapping_templates[content_type] = create_request_mapping_template()
 
     api_connection.create_integration(
         api_id, parent_id, method, gateway_function_arn,
@@ -156,13 +151,16 @@ secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 if not access_key or not secret_key:
     raise Exception("Critical information is missing")
 
-api_connection = ApiGatewayConnection(access_key, secret_key)
+api_connection = ApiGatewayConnection()
 
 # shouldn't need a third case here, parser should catch it
 if args.api_name:
     api_resp = api_connection.create_api(args.api_name)
 elif args.api_id:
     api_resp = api_connection.get_api(args.api_id)
+
+api_id = api_resp["id"]
+
 
 for path_info in path_infos:
     path = path_info[0]
@@ -192,13 +190,11 @@ for path_info in path_infos:
     if app_root:
         os.remove(zip_path)
 
-
     function_arn = resp["FunctionARN"]
     # rebuild this string concat so that respects region
     gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
                                '/2015-03-31/functions/{0}/invocations').format(
         function_arn)
-    api_id = api_resp.json()["id"]
 
     parent_id = create_resource_path(
         api_connection, api_id, path)

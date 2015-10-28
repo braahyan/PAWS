@@ -1,95 +1,44 @@
 from __future__ import print_function
+import boto3
 from sign_request import sign_request
 import os
 
 
 class ApiGatewayConnection:
 
-    def __init__(self, access_key=None, secret_key=None):
-
-        if not access_key or not secret_key:
-            access_key = os.environ.get('AWS_ACCESS_KEY_ID', access_key)
-            secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY', secret_key)
+    def __init__(self):
+        self.client = boto3.client("apigateway")
+        access_key = os.environ.get('AWS_ACCESS_KEY_ID')
+        secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
         self.access_key = access_key
         self.secret_key = secret_key
 
     def create_api(self, name):
-        resp = sign_request(self.access_key,
-                            self.secret_key,
-                            method='post',
-                            canonical_uri='/restapis',
-                            request_body={"name": name,
-                                          "cloneFrom": None,
-                                          "description": None})
-        return resp
-
-    def get_apis(self):
-        resp = sign_request(self.access_key,
-                            self.secret_key,
-                            method='get',
-                            canonical_uri='/restapis')
+        resp = self.client.create_rest_api(name=name)
         return resp
 
     def get_api(self, api_id):
-        resp = sign_request(self.access_key,
-                            self.secret_key,
-                            method='get',
-                            canonical_uri='/restapis/{0}'.format(api_id))
-        return resp
-
-    def delete_api(self, api_id):
-        resp = sign_request(self.access_key,
-                            self.secret_key,
-                            method='delete',
-                            canonical_uri="/restapis/{0}".format(api_id))
+        resp = self.client.get_rest_api(restApiId=api_id)
         return resp
 
     def get_resources(self, api_id):
-        resp = sign_request(self.access_key,
-                            self.secret_key,
-                            method='get',
-                            canonical_uri='/restapis/{0}/resources'.format(
-                                api_id))
+        resp = self.client.get_resources(restApiId=api_id)
         return resp
 
-    def get_resource(self, api_id, resource_id):
-        url = "/restapis/{0}/resources/{1}".format(api_id,
-                                                   resource_id)
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method="get", canonical_uri=url)
-
     def create_resource(self, api_id, parent_id, path_part):
-        url = "/restapis/{0}/resources/{1}".format(api_id, parent_id)
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method='post',
-                            request_body={"pathPart": path_part},
-                            canonical_uri=url)
+        response = self.client.create_resource(
+            restApiId=api_id,
+            parentId=parent_id,
+            pathPart=path_part
+        )
+        return response
 
     def create_method(self, api_id, resource_id, http_method):
-        url = "/restapis/{0}/resources/{1}/methods/{2}".format(
-            api_id, resource_id, http_method.upper())
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method='put',
-                            request_body={
-                                "authorizationType": "none",
-                                "apiKeyRequired": False,
-                                "requestParameters": {
-                                },
-                                "requestModels": {
-                                }
-                            },
-                            canonical_uri=url)
-
-    def get_method(self, api_id, resource_id, method):
-        url = "/restapis/{0}/resources/{1}/methods/{2}".format(
-            api_id, resource_id, method.upper())
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method="get", canonical_uri=url)
+        response = self.client.put_method(
+            restApiId=api_id, resourceId=resource_id, httpMethod=http_method,
+            authorizationType="none")
+        return response
 
     def create_integration(self, api_id, resource_id,
                            http_method, uri, credentials,
@@ -112,42 +61,24 @@ class ApiGatewayConnection:
                                 "cacheKeyParameters": []
                             })
 
-    def get_integration(self, api_id, resource_id, http_method):
-        url = str(
-            "/restapis/{0}/resources/"
-            "{1}/methods/{2}/integration"
-        ).format(api_id, resource_id, http_method.upper())
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            canonical_uri=url, method="get")
-
     def create_method_response(self, api_id, resource_id,
                                http_method, status_code):
-        url = "/restapis/{0}/resources/{1}/methods/{2}/responses/{3}".format(
-            api_id, resource_id, http_method.upper(), status_code)
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method="put",
-                            canonical_uri=url,
-                            request_body={
-                                "responseParameters": {
-                                },
-                                "responseModels": {
-                                    "application/json": "Empty"
-                                }
-                            })
-
-    def get_method_response(self, api_id, resource_id,
-                            http_method, status_code):
-        url = "/restapis/{0}/resources/{1}/methods/{2}/responses/{3}".format(
-            api_id, resource_id, http_method.upper(), status_code)
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method="get",
-                            canonical_uri=url)
+        response = self.client.put_method_response(
+            restApiId=api_id,
+            resourceId=resource_id,
+            httpMethod=http_method,
+            statusCode=str(status_code),
+            responseParameters={
+            },
+            responseModels={
+                "application/json": "Empty"
+            }
+        )
+        return response
 
     def create_integration_response(self, api_id,
                                     resource_id, http_method, status_code):
+
         url = str("/restapis/{0}/resources/{1}/methods/"
                   "{2}/integration/responses/{3}").format(
             api_id, resource_id, http_method.upper(), status_code)
@@ -169,15 +100,6 @@ class ApiGatewayConnection:
                           description="",
                           cache_cluster_enabled=False,
                           cache_cluster_size="0.5"):
-        url = "/restapis/{0}/deployments".format(api_id)
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method="post",
-                            canonical_uri=url,
-                            request_body={
-                                "stageName": stage_name,
-                                "stageDescription": stage_description,
-                                "description": description,
-                                "cacheClusterEnabled": cache_cluster_enabled,
-                                "cacheClusterSize": cache_cluster_size
-                            })
+        response = self.client.create_deployment(
+            restApiId=api_id, stageName=stage_name)
+        return response
