@@ -128,6 +128,9 @@ secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 if not access_key or not secret_key:
     raise Exception("Critical information is missing")
 
+path_infos, config = get_config(load_str, script_directory)
+
+
 api_connection = ApiGatewayConnection()
 
 # shouldn't need a third case here, parser should catch it
@@ -139,7 +142,6 @@ elif args.api_id:
 
 api_id = api_resp["id"]
 
-path_infos, config = get_config(load_str, script_directory)
 for path_info in path_infos:
     path = path_info[0]
     zip_path = path_info[1]
