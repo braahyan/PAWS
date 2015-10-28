@@ -2,10 +2,8 @@ from lambda_client import upload
 from api_gateway import ApiGatewayConnection
 import os
 from argparse import ArgumentParser
-import json
-import yaml
-from jsonschema import validate
 import zipfile
+from config import get_config
 
 
 def zipdir(path, out_path):
@@ -115,33 +113,6 @@ args = parser.parse_args()
 
 load_str = args.conf
 script_directory = os.path.dirname(__file__)
-if script_directory:
-    script_directory += "/"
-with open(script_directory + "schema.json") as schema_file:
-    schema_text = schema_file.read()
-    schema_object = json.loads(schema_text)
-with open(load_str) as foo:
-    body = foo.read()
-if "yaml" in load_str:
-    # hack to make schema work, likely related to unicode
-    spec = json.loads(json.dumps(yaml.load(body)))
-elif "json" in load_str:
-    spec = json.loads(body)
-validate(spec, schema_object)
-produces = spec["produces"]  # this is a list
-path_infos = []
-for path_name in spec["paths"]:
-    for method in spec["paths"][path_name].keys():
-        path_infos.append(
-            [path_name,
-             spec["paths"][path_name][method][
-                 "x-zip-path"] if "x-zip-path"
-             in spec["paths"][path_name][method] else None,
-             spec["paths"][path_name][method]["operationId"],
-             spec["paths"][path_name][method]["x-handler-name"],
-             spec["paths"][path_name][method]["x-role-arn"],
-             method.upper(),
-             spec["paths"][path_name][method]["parameters"]])
 
 
 # this role will require the AWSLambdaRole role
@@ -161,7 +132,7 @@ elif args.api_id:
 
 api_id = api_resp["id"]
 
-
+path_infos, config = get_config(load_str, script_directory)
 for path_info in path_infos:
     path = path_info[0]
     zip_path = path_info[1]
@@ -176,7 +147,7 @@ for path_info in path_infos:
     app_root = None
 
     if not zip_path:
-        app_root = spec['x-application-root']
+        app_root = config['x-application-root']
         if app_root[-1] != "/":
             app_root += "/"
         zipdir(app_root, "main.zip")
