@@ -1,3 +1,5 @@
+Pardon my mess, PAWS is still in heavy development.
+
 export AWS_ACCESS_KEY_ID=__YOUR_ACCESS_KEY_HERE__
 export AWS_SECRET_ACCESS_KEY=__YOUR_SECRET_ACCESS_KEY_HERE__
 
@@ -8,11 +10,11 @@ The AWS role supplied above must have a trust policy set up that has a trust rel
 
 
 example main invocation.
-python main.py --api_name foobar --conf swagger.yaml
+python main.py --api_name foobar --conf swagger.yaml (--publish your_stage_name)
 
 
 example update invocation.
-python main.py --api_id 782gr8gmnb --conf swagger.yaml
+python main.py --api_id 782gr8gmnb --conf swagger.yaml (--publish your_stage_name)
 
 
 *Roadmap*
