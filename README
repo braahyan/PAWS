@@ -8,7 +8,7 @@ PAWS uses a config language that is an extension of swagger.
 The AWS role below must have a trust policy set up that has a trust relationship with both Lambda and API Gateway, additionally, it should have the "lambda:InvokeFunction" permission associated with it.
 
 Here is a very simple PAWS yaml example:
-'''yaml
+```yaml
 
 swagger: '2.0'
 info:
@@ -79,7 +79,7 @@ definitions:
       message:
         type: string
 
-'''
+```
 
 
 export AWS_ACCESS_KEY_ID=__YOUR_ACCESS_KEY_HERE__
