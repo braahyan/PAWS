@@ -99,7 +99,7 @@ class ApiGatewayConnection:
             "/restapis/{0}/resources/"
             "{1}/methods/{2}/integration"
         ).format(api_id, resource_id, http_method.upper())
-        return sign_request(self.access_key,
+        resp = sign_request(self.access_key,
                             self.secret_key,
                             canonical_uri=url, method='put', request_body={
                                 "type": "AWS",
@@ -112,3 +112,4 @@ class ApiGatewayConnection:
                                 "cacheNamespace": "none",
                                 "cacheKeyParameters": []
                             })
+        return resp

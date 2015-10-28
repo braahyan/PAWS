@@ -1,3 +1,4 @@
+from __future__ import print_function
 from lambda_client import upload
 from api_gateway import ApiGatewayConnection
 import os
@@ -103,6 +104,9 @@ parser.add_argument(
     "--conf", type=str, default=None, required=True,
     help="YAML or JSON swagger config describing your API")
 
+parser.add_argument("--publish", type=str, default=None,
+                    help="name of the stage to publish to (default:dev)")
+
 api_group = parser.add_mutually_exclusive_group(required=True)
 api_group.add_argument(
     "--api_id", type=str, help="the api you wish to update")
@@ -113,7 +117,9 @@ args = parser.parse_args()
 
 load_str = args.conf
 script_directory = os.path.dirname(__file__)
-
+stage_name = args.publish or "dev"
+is_publishing = args.publish is not None
+api_name = args.api_name
 
 # this role will require the AWSLambdaRole role
 access_key = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -125,10 +131,11 @@ if not access_key or not secret_key:
 api_connection = ApiGatewayConnection()
 
 # shouldn't need a third case here, parser should catch it
-if args.api_name:
+if api_name:
     api_resp = api_connection.create_api(args.api_name)
 elif args.api_id:
     api_resp = api_connection.get_api(args.api_id)
+    api_name = api_resp["name"]
 
 api_id = api_resp["id"]
 
@@ -143,7 +150,6 @@ for path_info in path_infos:
     parameters = path_info[6]
     status_code = 200
     content_type = "application/json"
-    stage_name = "test"
     app_root = None
 
     if not zip_path:
@@ -154,10 +160,11 @@ for path_info in path_infos:
         zip_path = "main.zip"
 
     with open(zip_path) as zip_file:
-        lambda_resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
+        lambda_resp = upload("PAWS-{0}-{1}".format(api_name, function_name),
                              zip_file,
                              creds_arn,
-                             handler_name)
+                             handler_name,
+                             is_publishing)
 
     if app_root:
         os.remove(zip_path)
