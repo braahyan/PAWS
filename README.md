@@ -8,8 +8,8 @@ PAWS uses a config language that is an extension of swagger.
 The AWS role below must have a trust policy set up that has a trust relationship with both Lambda and API Gateway, additionally, it should have the "lambda:InvokeFunction" permission associated with it.
 
 Here is a very simple PAWS yaml example:
-```yaml
 
+```yaml
 swagger: '2.0'
 info:
   version: 1.0.0
@@ -81,9 +81,12 @@ definitions:
 
 ```
 
+PAWS expects these environment variables to be available:
 
+```
 export AWS_ACCESS_KEY_ID=__YOUR_ACCESS_KEY_HERE__
 export AWS_SECRET_ACCESS_KEY=__YOUR_SECRET_ACCESS_KEY_HERE__
+```
 
 The AWS access key needs permissions to administer the account. Right now I have only tested with the administrator access role, but will be updating this as I gain a greater understanding of the AWS permissions model.
 
