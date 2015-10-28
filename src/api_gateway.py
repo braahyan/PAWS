@@ -92,7 +92,9 @@ class ApiGatewayConnection:
 
     def create_integration(self, api_id, resource_id,
                            http_method, uri, credentials,
-                           content_mapping_templates={}):
+                           content_mapping_templates=None):
+        if not content_mapping_templates:
+            content_mapping_templates = {}
         url = str(
             "/restapis/{0}/resources/"
             "{1}/methods/{2}/integration"
