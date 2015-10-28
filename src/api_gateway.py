@@ -35,45 +35,40 @@ class ApiGatewayConnection:
         return response
 
     def create_method(self, api_id, resource_id, http_method):
-        response = self.client.put_method(
-            restApiId=api_id, resourceId=resource_id, httpMethod=http_method,
-            authorizationType="none")
-        return response
-
-    def create_integration(self, api_id, resource_id,
-                           http_method, uri, credentials,
-                           content_mapping_templates={}):
-        url = str(
-            "/restapis/{0}/resources/"
-            "{1}/methods/{2}/integration"
-        ).format(api_id, resource_id, http_method.upper())
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            canonical_uri=url, method='put', request_body={
-                                "type": "AWS",
-                                "httpMethod": "POST",
-                                "uri": uri,
-                                "credentials": credentials,
-                                "requestParameters": {
-                                },
-                                "requestTemplates": content_mapping_templates,
-                                "cacheNamespace": "none",
-                                "cacheKeyParameters": []
-                            })
+        try:
+            self.client.put_method(
+                restApiId=api_id, resourceId=resource_id,
+                httpMethod=http_method,
+                authorizationType="none")
+            return True
+        except Exception:
+            return False
 
     def create_method_response(self, api_id, resource_id,
                                http_method, status_code):
-        response = self.client.put_method_response(
-            restApiId=api_id,
-            resourceId=resource_id,
-            httpMethod=http_method,
-            statusCode=str(status_code),
-            responseParameters={
-            },
-            responseModels={
-                "application/json": "Empty"
-            }
-        )
+        try:
+            self.client.put_method_response(
+                restApiId=api_id,
+                resourceId=resource_id,
+                httpMethod=http_method,
+                statusCode=str(status_code),
+                responseParameters={
+                },
+                responseModels={
+                    "application/json": "Empty"
+                }
+            )
+            return True
+        except Exception:
+            return False
+
+    def create_deployment(self, api_id, stage_name,
+                          stage_description="",
+                          description="",
+                          cache_cluster_enabled=False,
+                          cache_cluster_size="0.5"):
+        response = self.client.create_deployment(
+            restApiId=api_id, stageName=stage_name)
         return response
 
     def create_integration_response(self, api_id,
@@ -95,11 +90,23 @@ class ApiGatewayConnection:
                                 }
                             })
 
-    def create_deployment(self, api_id, stage_name,
-                          stage_description="",
-                          description="",
-                          cache_cluster_enabled=False,
-                          cache_cluster_size="0.5"):
-        response = self.client.create_deployment(
-            restApiId=api_id, stageName=stage_name)
-        return response
+    def create_integration(self, api_id, resource_id,
+                           http_method, uri, credentials,
+                           content_mapping_templates={}):
+        url = str(
+            "/restapis/{0}/resources/"
+            "{1}/methods/{2}/integration"
+        ).format(api_id, resource_id, http_method.upper())
+        return sign_request(self.access_key,
+                            self.secret_key,
+                            canonical_uri=url, method='put', request_body={
+                                "type": "AWS",
+                                "httpMethod": "POST",
+                                "uri": uri,
+                                "credentials": credentials,
+                                "requestParameters": {
+                                },
+                                "requestTemplates": content_mapping_templates,
+                                "cacheNamespace": "none",
+                                "cacheKeyParameters": []
+                            })

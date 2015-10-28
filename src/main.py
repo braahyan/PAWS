@@ -173,6 +173,7 @@ for path_info in path_infos:
     status_code = 200
     content_type = "application/json"
     stage_name = "test"
+    app_root = None
 
     if not zip_path:
         app_root = spec['x-application-root']
