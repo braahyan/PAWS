@@ -1,4 +1,3 @@
 boto3
-boto
 jsonschema
 pyyaml

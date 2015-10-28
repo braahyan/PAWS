@@ -154,15 +154,15 @@ for path_info in path_infos:
         zip_path = "main.zip"
 
     with open(zip_path) as zip_file:
-        resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
-                      zip_file,
-                      creds_arn,
-                      handler_name)
+        lambda_resp = upload("PAWS-{0}-{1}".format(stage_name, function_name),
+                             zip_file,
+                             creds_arn,
+                             handler_name)
 
     if app_root:
         os.remove(zip_path)
 
-    function_arn = resp["FunctionARN"]
+    function_arn = lambda_resp["FunctionArn"]
     # rebuild this string concat so that respects region
     gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
                                '/2015-03-31/functions/{0}/invocations').format(
