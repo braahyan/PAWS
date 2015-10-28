@@ -190,8 +190,8 @@ for path_info in path_infos:
                       handler_name)
 
     if app_root:
-        # os.remove(zip_path)
-        pass
+        os.remove(zip_path)
+
 
     function_arn = resp["FunctionARN"]
     # rebuild this string concat so that respects region
