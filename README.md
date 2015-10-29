@@ -1,7 +1,7 @@
 Pardon my mess, PAWS is still in heavy development.
 
 
-
+## Configuration
 
 PAWS uses a config language that is an extension of swagger. 
 
@@ -90,14 +90,14 @@ export AWS_SECRET_ACCESS_KEY=__YOUR_SECRET_ACCESS_KEY_HERE__
 
 The AWS access key needs permissions to administer the account. Right now I have only tested with the administrator access role, but will be updating this as I gain a greater understanding of the AWS permissions model.
 
-example main invocation.
+##example main invocation.
 ```
 python main.py --api_name foobar --conf swagger.yaml (--publish your_stage_name)
 ```
 *Note that the first time you run this, it will create the api, the second time, it will search for the API by name*
 
 
-example update invocation.
+##example update invocation.
 ```
 python main.py --api_id 782gr8gmnb --conf swagger.yaml (--publish your_stage_name)
 ```
