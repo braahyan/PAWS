@@ -43,7 +43,8 @@ def create_resource_path(api_connection, api_id, path):
 
 
 def create_request_mapping_template():
-    mapping_template = """#set($params = $input.params())
+    mapping_template = """
+#set($params = $input.params())
 #set($path = $params.path)
 #set($querystring = $params.querystring)
 #set($headers = $params.header)
@@ -69,10 +70,11 @@ def create_request_mapping_template():
     #end
     }
 
-    #if("$!body" != ""),
+#if(!$body),
 "body": $body
 #end
-}"""
+}
+"""
 
     return mapping_template
 
@@ -95,13 +97,22 @@ def is_substring_of_path(needle, haystack):
     return True
 
 
-def prune_nonexistent_paths(api_connection, api_id, paths):
-    resources = reversed(sorted(api_connection.get_resources(
-        api_id)['items'], key=lambda x: x["path"].count("/")))
+def get_paths_to_delete(resources, paths):
+    sorted_resources = reversed(sorted(resources,
+                                       key=lambda x: x["path"].count("/")))
     resources_to_delete = [resource['id']
                            for resource
-                           in resources
+                           in sorted_resources
+                           # is substring of path determines if the
+                           # current path is a substring of any of the other
+                           # paths passed in
                            if is_substring_of_path(resource["path"], paths)]
+    return resources_to_delete
+
+
+def prune_nonexistent_paths(api_connection, api_id, paths):
+    resources = api_connection.get_resources(api_id)['items']
+    resources_to_delete = get_paths_to_delete(resources, paths)
     for resource_to_delete in resources_to_delete:
         api_connection.delete_resource(api_id, resource_to_delete)
 
