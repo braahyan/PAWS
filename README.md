@@ -3,7 +3,7 @@ Pardon my mess, PAWS is still in heavy development.
 
 ## Configuration
 
-PAWS uses a config language that is an extension of swagger. 
+PAWS uses a config language that is an extension of [swagger](http://swagger.io/). 
 
 The AWS role below must have a trust policy set up that has a trust relationship with both Lambda and API Gateway, additionally, it should have the "lambda:InvokeFunction" permission associated with it.
 
