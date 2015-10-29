@@ -22,8 +22,19 @@ class ApiGatewayConnection:
         resp = self.client.get_rest_api(restApiId=api_id)
         return resp
 
+    def get_api_by_name(self, api_name):
+        resp = self.client.get_rest_apis()
+        return next(
+            (x for x in resp['items'] if x['name'] == api_name),
+            None)
+
     def get_resources(self, api_id):
         resp = self.client.get_resources(restApiId=api_id)
+        return resp
+
+    def delete_resource(self, api_id, resource_id):
+        resp = self.client.delete_resource(
+            restApiId=api_id, resourceId=resource_id)
         return resp
 
     def create_resource(self, api_id, parent_id, path_part):

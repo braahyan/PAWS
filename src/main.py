@@ -3,18 +3,8 @@ from lambda_client import upload
 from api_gateway import ApiGatewayConnection
 import os
 from argparse import ArgumentParser
-import zipfile
+from util import zipdir
 from config import get_config
-
-
-def zipdir(path, out_path):
-    with zipfile.ZipFile(out_path, 'w') as ziph:
-        for root, dirs, files in os.walk(path):
-            for fn in files:
-                absfn = os.path.join(root, fn)
-                zfn = absfn[len(path):]  # XXX: relative path
-                ziph.write(absfn, zfn)
-    return out_path
 
 
 def get_path_segments(path):
@@ -98,6 +88,24 @@ def create_integration_request(api_id, parent_id, method,
         creds_arn, mapping_templates)
 
 
+def is_substring_of_path(needle, haystack):
+    for x in haystack:
+        if x.find(needle) == 0:
+            return False
+    return True
+
+
+def prune_nonexistent_paths(api_connection, api_id, paths):
+    resources = reversed(sorted(api_connection.get_resources(
+        api_id)['items'], key=lambda x: x["path"].count("/")))
+    resources_to_delete = [resource['id']
+                           for resource
+                           in resources
+                           if is_substring_of_path(resource["path"], paths)]
+    for resource_to_delete in resources_to_delete:
+        api_connection.delete_resource(api_id, resource_to_delete)
+
+
 parser = ArgumentParser(description=str('deploy an api to AWS lambda '
                                         'and API Gateway'))
 parser.add_argument(
@@ -120,8 +128,8 @@ script_directory = os.path.dirname(__file__)
 stage_name = args.publish or "dev"
 is_publishing = args.publish is not None
 api_name = args.api_name
+api_id = args.api_id
 
-# this role will require the AWSLambdaRole role
 access_key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
@@ -129,18 +137,24 @@ if not access_key or not secret_key:
     raise Exception("Critical information is missing")
 
 path_infos, config = get_config(load_str, script_directory)
-
+application_root = config["x-application-root"]
 
 api_connection = ApiGatewayConnection()
 
 # shouldn't need a third case here, parser should catch it
 if api_name:
-    api_resp = api_connection.create_api(args.api_name)
-elif args.api_id:
-    api_resp = api_connection.get_api(args.api_id)
+    api_resp = api_connection.get_api_by_name(api_name)
+    if not api_resp:
+        api_resp = api_connection.create_api(api_name)
+elif api_id:
+    api_resp = api_connection.get_api(api_id)
     api_name = api_resp["name"]
 
 api_id = api_resp["id"]
+
+
+prune_nonexistent_paths(api_connection, api_id, [x[0] for x in path_infos])
+
 
 for path_info in path_infos:
     path = path_info[0]
@@ -154,8 +168,9 @@ for path_info in path_infos:
     content_type = "application/json"
     app_root = None
 
+    # package source code if we have it
     if not zip_path:
-        app_root = config['x-application-root']
+        app_root = application_root
         if app_root[-1] != "/":
             app_root += "/"
         zipdir(app_root, "main.zip")
