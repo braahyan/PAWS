@@ -80,7 +80,7 @@ definitions:
         type: string
 
 ```
-#Environment Variables
+##Environment Variables
 PAWS expects these environment variables to be available:
 
 ```
