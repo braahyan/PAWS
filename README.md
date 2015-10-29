@@ -93,6 +93,8 @@ The AWS access key needs permissions to administer the account. Right now I have
 example main invocation.
 python main.py --api_name foobar --conf swagger.yaml (--publish your_stage_name)
 
+*Note that the first time you run this, it will create the api, the second time, it will search for the API by name*
+
 
 example update invocation.
 python main.py --api_id 782gr8gmnb --conf swagger.yaml (--publish your_stage_name)
