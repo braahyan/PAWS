@@ -87,8 +87,8 @@ def create_resource_path(api_connection, api_id, path, resources):
     return parent_id, resources
 
 
-def is_substring_of_path(needle, haystack):
-    """returns true if the needle is a substring
+def is_not_substring_of_path(needle, haystack):
+    """returns false if the needle is a substring
        of anything in the haystack
 
     Args:
@@ -122,7 +122,8 @@ def get_resources_to_delete(resources, paths):
                            # is substring of path determines if the
                            # current path is a substring of any of the other
                            # paths passed in
-                           if is_substring_of_path(resource["path"], paths)]
+                           if is_not_substring_of_path(resource["path"],
+                                                       paths)]
     return resources_to_delete
 
 
