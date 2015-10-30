@@ -20,6 +20,33 @@ def get_path_segments(path):
     return parts
 
 
+def get_resource_by_path(path, resources):
+    return next(
+        (x for x in resources if x['path'] == path),
+        None)
+
+
+def get_resources_to_create(path, resources):
+    cur_path = "/"
+    segments = get_path_segments(path)
+    parent_id = get_resource_by_path("/", resources)['id']
+
+    resources_to_create = []
+
+    for segment in segments:
+        cur_path += segment
+
+        previous_created_resource = get_resource_by_path(cur_path, resources)
+
+        if not previous_created_resource:
+            resources_to_create.append(segment)
+        else:
+            parent_id = previous_created_resource["id"]
+        cur_path += "/"
+
+    return parent_id, resources_to_create
+
+
 def create_resource_path(api_connection, api_id, path):
     """creates all resources necessary for a path
 
@@ -31,28 +58,18 @@ def create_resource_path(api_connection, api_id, path):
     Returns:
         str: id of the resource that was created
     """
-    segments = get_path_segments(path)
     resources = api_connection.get_resources(api_id)
 
-    parent_id = next(
-        (x for x in resources['items'] if x['path'] == '/'),
-        None)['id']
+    parent_id, resources_to_create = get_resources_to_create(
+        path, resources['items'])
 
     cur_path = "/"
-    for segment in segments:
+    for segment in resources_to_create:
         cur_path += segment
-        # see if we've already created the endpoint we're
-        # looking for
-        previous_created_resource = next(
-            (x for x in resources['items'] if x['path'] == cur_path
-             and x['parentId'] == parent_id), None)
 
-        if previous_created_resource:
-            resource_json = previous_created_resource
-        else:
-            create_resource_resp = api_connection.create_resource(
-                api_id, parent_id, segment)
-            resource_json = create_resource_resp
+        create_resource_resp = api_connection.create_resource(
+            api_id, parent_id, segment)
+        resource_json = create_resource_resp
 
         parent_id = resource_json["id"]
         cur_path += "/"
@@ -109,7 +126,7 @@ def create_integration_request(api_id, parent_id, method,
 
 
 def is_substring_of_path(needle, haystack):
-    """returns true if the needles is a substring
+    """returns true if the needle is a substring
        of anything in the haystack
 
     Args:
