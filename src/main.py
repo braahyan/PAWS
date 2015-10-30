@@ -207,7 +207,6 @@ args = parser.parse_args()
 load_str = args.conf
 script_directory = os.path.dirname(__file__)
 stage_name = args.publish or "dev"
-is_publishing = args.publish is not None
 api_name = args.api_name
 api_id = args.api_id
 
@@ -259,16 +258,15 @@ for path_info in path_infos:
         zip_path = "main.zip"
 
     with open(zip_path) as zip_file:
-        lambda_resp = upload("PAWS-{0}-{1}".format(api_name, function_name),
-                             zip_file,
-                             creds_arn,
-                             handler_name,
-                             is_publishing)
+        function_arn = upload("PAWS-{0}-{1}".format(api_name, function_name),
+                              zip_file,
+                              creds_arn,
+                              handler_name,
+                              stage_name)
 
     if app_root:
         os.remove(zip_path)
 
-    function_arn = lambda_resp["FunctionArn"]
     # todo:rebuild this string concat so that respects region
     gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
                                '/2015-03-31/functions/{0}/invocations').format(

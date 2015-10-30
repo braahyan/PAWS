@@ -3,7 +3,7 @@ import boto3
 client = boto3.client("lambda")
 
 
-def upload(function_name, function_zip, role, handler, publish=False):
+def upload(function_name, function_zip, role, handler, alias_name=None):
     zip_buffer = function_zip.read()
     try:
         resp = client.create_function(FunctionName=function_name,
@@ -11,9 +11,23 @@ def upload(function_name, function_zip, role, handler, publish=False):
                                       Role=role,
                                       Handler=handler,
                                       Code={"ZipFile": zip_buffer},
-                                      Publish=publish)
+                                      Publish=True)
     except Exception:
         resp = client.update_function_code(FunctionName=function_name,
                                            ZipFile=zip_buffer,
-                                           Publish=publish)
-    return resp
+                                           Publish=True)
+    if alias_name:
+        try:
+            resp = client.create_alias(
+                FunctionName=resp["FunctionName"],
+                Name=alias_name,
+                FunctionVersion=resp["Version"]
+            )
+        except Exception:
+            resp = client.update_alias(
+                FunctionName=resp["FunctionName"],
+                Name=alias_name,
+                FunctionVersion=resp["Version"]
+            )
+        return resp["AliasArn"]
+    return resp["FunctionArn"]
