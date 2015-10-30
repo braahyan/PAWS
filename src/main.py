@@ -58,7 +58,7 @@ def get_resources_to_create(path, resources):
     return parent_id, resources_to_create
 
 
-def create_resource_path(api_connection, api_id, path):
+def create_resource_path(api_connection, api_id, path, resources):
     """creates all resources necessary for a path
 
     Args:
@@ -69,23 +69,74 @@ def create_resource_path(api_connection, api_id, path):
     Returns:
         str: id of the resource that was created
     """
-    resources = api_connection.get_resources(api_id)
 
     parent_id, resources_to_create = get_resources_to_create(
-        path, resources['items'])
+        path, resources)
 
     cur_path = "/"
     for segment in resources_to_create:
         cur_path += segment
 
-        create_resource_resp = api_connection.create_resource(
+        response = api_connection.create_resource(
             api_id, parent_id, segment)
-        resource_json = create_resource_resp
+        resources.append(response)
 
-        parent_id = resource_json["id"]
+        parent_id = response["id"]
         cur_path += "/"
 
-    return parent_id
+    return parent_id, resources
+
+
+def is_substring_of_path(needle, haystack):
+    """returns true if the needle is a substring
+       of anything in the haystack
+
+    Args:
+        needle (str): String to find in haystack
+        haystack (list(str)): Collection to search through
+
+    Returns:
+        bool: Description
+    """
+    for x in haystack:
+        if x.find(needle) == 0:
+            return False
+    return True
+
+
+def get_resources_to_delete(resources, paths):
+    """returns a list of all resources to delete
+
+    Args:
+        resources (list(dict)): resources to compare to the paths
+        paths (list(str)): paths from the config file
+
+    Returns:
+        list(str): list of ids of resources to remove
+    """
+    sorted_resources = reversed(sorted(resources,
+                                       key=lambda x: x["path"].count("/")))
+    resources_to_delete = [resource['id']
+                           for resource
+                           in sorted_resources
+                           # is substring of path determines if the
+                           # current path is a substring of any of the other
+                           # paths passed in
+                           if is_substring_of_path(resource["path"], paths)]
+    return resources_to_delete
+
+
+def prune_nonexistent_paths(api_connection, api_id, paths, resources):
+    """Deletes all paths that don't exist in paths from given api
+
+    Args:
+        api_connection (ApiGatewayConnection): api gateway client
+        api_id (str): id of api to work on
+        paths (list(str)): list of paths from config
+    """
+    resources_to_delete = get_resources_to_delete(resources, paths)
+    for resource_to_delete in resources_to_delete:
+        api_connection.delete_resource(api_id, resource_to_delete)
 
 
 def create_request_mapping_template():
@@ -136,59 +187,6 @@ def create_integration_request(api_id, parent_id, method,
         creds_arn, mapping_templates)
 
 
-def is_substring_of_path(needle, haystack):
-    """returns true if the needle is a substring
-       of anything in the haystack
-
-    Args:
-        needle (str): String to find in haystack
-        haystack (list(str)): Collection to search through
-
-    Returns:
-        bool: Description
-    """
-    for x in haystack:
-        if x.find(needle) == 0:
-            return False
-    return True
-
-
-def get_resources_to_delete(resources, paths):
-    """returns a list of all resources to delete
-
-    Args:
-        resources (list(dict)): resources to compare to the paths
-        paths (list(str)): paths from the config file
-
-    Returns:
-        list(str): list of ids of resources to remove
-    """
-    sorted_resources = reversed(sorted(resources,
-                                       key=lambda x: x["path"].count("/")))
-    resources_to_delete = [resource['id']
-                           for resource
-                           in sorted_resources
-                           # is substring of path determines if the
-                           # current path is a substring of any of the other
-                           # paths passed in
-                           if is_substring_of_path(resource["path"], paths)]
-    return resources_to_delete
-
-
-def prune_nonexistent_paths(api_connection, api_id, paths):
-    """Deletes all paths that don't exist in paths from given api
-
-    Args:
-        api_connection (ApiGatewayConnection): api gateway client
-        api_id (str): id of api to work on
-        paths (list(str)): list of paths from config
-    """
-    resources = api_connection.get_resources(api_id)['items']
-    resources_to_delete = get_resources_to_delete(resources, paths)
-    for resource_to_delete in resources_to_delete:
-        api_connection.delete_resource(api_id, resource_to_delete)
-
-
 parser = ArgumentParser(description=str('deploy an api to AWS lambda '
                                         'and API Gateway'))
 parser.add_argument(
@@ -235,8 +233,9 @@ elif api_id:
 
 api_id = api_resp["id"]
 
-
-prune_nonexistent_paths(api_connection, api_id, [x[0] for x in path_infos])
+resources = api_connection.get_resources(api_id)['items']
+prune_nonexistent_paths(
+    api_connection, api_id, [x[0] for x in path_infos], resources)
 
 
 for path_info in path_infos:
@@ -275,8 +274,8 @@ for path_info in path_infos:
                                '/2015-03-31/functions/{0}/invocations').format(
         function_arn)
 
-    parent_id = create_resource_path(
-        api_connection, api_id, path)
+    parent_id, resources = create_resource_path(
+        api_connection, api_id, path, resources)
 
     api_connection.create_method(
         api_id, parent_id, method)
