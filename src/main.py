@@ -129,7 +129,7 @@ def get_resources_to_delete(resources, paths):
     """returns a list of all resources to delete
 
     Args:
-        resources (list(obj)): resources to compare to the paths
+        resources (list(dict)): resources to compare to the paths
         paths (list(str)): paths from the config file
 
     Returns:
@@ -242,7 +242,7 @@ for path_info in path_infos:
         os.remove(zip_path)
 
     function_arn = lambda_resp["FunctionArn"]
-    # rebuild this string concat so that respects region
+    # todo:rebuild this string concat so that respects region
     gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
                                '/2015-03-31/functions/{0}/invocations').format(
         function_arn)
