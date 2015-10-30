@@ -98,10 +98,7 @@ def is_not_substring_of_path(needle, haystack):
     Returns:
         bool: Description
     """
-    for x in haystack:
-        if x.find(needle) == 0:
-            return False
-    return True
+    return not any(x.startswith(needle) for x in haystack)
 
 
 def get_resources_to_delete(resources, paths):
@@ -114,8 +111,8 @@ def get_resources_to_delete(resources, paths):
     Returns:
         list(str): list of ids of resources to remove
     """
-    sorted_resources = reversed(sorted(resources,
-                                       key=lambda x: x["path"].count("/")))
+    sorted_resources = sorted(resources,
+                              key=lambda x: x["path"].count("/"), reverse=True)
     resources_to_delete = [resource['id']
                            for resource
                            in sorted_resources
@@ -135,9 +132,13 @@ def prune_nonexistent_paths(api_connection, api_id, paths, resources):
         api_id (str): id of api to work on
         paths (list(str)): list of paths from config
     """
+    resources = list(resources)
     resources_to_delete = get_resources_to_delete(resources, paths)
     for resource_to_delete in resources_to_delete:
         api_connection.delete_resource(api_id, resource_to_delete)
+        resources = filter(
+            lambda x: x["id"] != resource_to_delete, resources)
+    return resources
 
 
 def create_request_mapping_template():
@@ -234,7 +235,8 @@ elif api_id:
 api_id = api_resp["id"]
 
 resources = api_connection.get_resources(api_id)['items']
-prune_nonexistent_paths(
+
+resources = prune_nonexistent_paths(
     api_connection, api_id, [x[0] for x in path_infos], resources)
 
 
