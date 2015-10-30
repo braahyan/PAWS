@@ -27,6 +27,17 @@ def get_resource_by_path(path, resources):
 
 
 def get_resources_to_create(path, resources):
+    """gets the resources to create for this path
+
+    Args:
+        path (str): path to create
+        resources (list(str)): list of resources that have already been created
+
+    Returns:
+        (str, list(str)): the first item is a parent_id of the path to create,
+                          the second is a list of path segments to create, in
+                          order
+    """
     cur_path = "/"
     segments = get_path_segments(path)
     parent_id = get_resource_by_path("/", resources)['id']
