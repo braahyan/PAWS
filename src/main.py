@@ -8,11 +8,29 @@ from config import get_config
 
 
 def get_path_segments(path):
+    """splits a path into its segments
+
+    Args:
+        path (str): the path to explode
+
+    Returns:
+        list(str): list of path segments, in order
+    """
     parts = filter(None, path.split(os.sep))
     return parts
 
 
 def create_resource_path(api_connection, api_id, path):
+    """creates all resources necessary for a path
+
+    Args:
+        api_connection (ApiGatewayConnection): api gateway client
+        api_id (str): id of the api to operate on
+        path (str): path to create
+
+    Returns:
+        str: id of the resource that was created
+    """
     segments = get_path_segments(path)
     resources = api_connection.get_resources(api_id)
 
@@ -91,13 +109,32 @@ def create_integration_request(api_id, parent_id, method,
 
 
 def is_substring_of_path(needle, haystack):
+    """returns true if the needles is a substring
+       of anything in the haystack
+
+    Args:
+        needle (str): String to find in haystack
+        haystack (list(str)): Collection to search through
+
+    Returns:
+        bool: Description
+    """
     for x in haystack:
         if x.find(needle) == 0:
             return False
     return True
 
 
-def get_paths_to_delete(resources, paths):
+def get_resources_to_delete(resources, paths):
+    """returns a list of all resources to delete
+
+    Args:
+        resources (list(obj)): resources to compare to the paths
+        paths (list(str)): paths from the config file
+
+    Returns:
+        list(str): list of ids of resources to remove
+    """
     sorted_resources = reversed(sorted(resources,
                                        key=lambda x: x["path"].count("/")))
     resources_to_delete = [resource['id']
@@ -111,8 +148,15 @@ def get_paths_to_delete(resources, paths):
 
 
 def prune_nonexistent_paths(api_connection, api_id, paths):
+    """Deletes all paths that don't exist in paths from given api
+
+    Args:
+        api_connection (ApiGatewayConnection): api gateway client
+        api_id (str): id of api to work on
+        paths (list(str)): list of paths from config
+    """
     resources = api_connection.get_resources(api_id)['items']
-    resources_to_delete = get_paths_to_delete(resources, paths)
+    resources_to_delete = get_resources_to_delete(resources, paths)
     for resource_to_delete in resources_to_delete:
         api_connection.delete_resource(api_id, resource_to_delete)
 
