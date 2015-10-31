@@ -185,6 +185,7 @@ def create_integration_request(api_id, parent_id, method,
         api_id, parent_id, method, gateway_function_arn,
         creds_arn, mapping_templates)
 
+
 if __name__ == '__main__':
 
     parser = ArgumentParser(description=str('deploy an api to AWS lambda '
@@ -269,8 +270,9 @@ if __name__ == '__main__':
             os.remove(zip_path)
 
         # todo:rebuild this string concat so that respects region
-        gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
-                                   '/2015-03-31/functions/{0}/invocations').format(
+        gateway_function_arn = str(
+            'arn:aws:apigateway:us-east-1:lambda:path'
+            '/2015-03-31/functions/{0}/invocations').format(
             function_arn)
 
         parent_id, resources = create_resource_path(
