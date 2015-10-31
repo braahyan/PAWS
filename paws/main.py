@@ -21,6 +21,15 @@ def get_path_segments(path):
 
 
 def get_resource_by_path(path, resources):
+    """gets the resource that matches given path
+
+    Args:
+        path (str): path to find
+        resources (list(str)): list of resources
+
+    Returns:
+        dict: resource that matches given path, None otherwise
+    """
     return next(
         (x for x in resources if x['path'] == path),
         None)
@@ -38,22 +47,22 @@ def get_resources_to_create(path, resources):
                           the second is a list of path segments to create, in
                           order
     """
-    cur_path = "/"
+    cur_path = []
     segments = get_path_segments(path)
     parent_id = get_resource_by_path("/", resources)['id']
 
     resources_to_create = []
 
     for segment in segments:
-        cur_path += segment
+        cur_path.append(segment)
 
-        previous_created_resource = get_resource_by_path(cur_path, resources)
+        previous_created_resource = get_resource_by_path(
+            "/{}".format("/".join(cur_path)), resources)
 
         if not previous_created_resource:
             resources_to_create.append(segment)
         else:
             parent_id = previous_created_resource["id"]
-        cur_path += "/"
 
     return parent_id, resources_to_create
 
@@ -73,21 +82,18 @@ def create_resource_path(api_connection, api_id, path, resources):
     parent_id, resources_to_create = get_resources_to_create(
         path, resources)
 
-    cur_path = "/"
     for segment in resources_to_create:
-        cur_path += segment
 
         response = api_connection.create_resource(
             api_id, parent_id, segment)
         resources.append(response)
 
         parent_id = response["id"]
-        cur_path += "/"
 
     return parent_id, resources
 
 
-def is_not_substring_of_path(needle, haystack):
+def is_not_substring_of_paths(needle, haystack):
     """returns false if anything in the haystack starts with the needle
 
     Args:
@@ -116,8 +122,8 @@ def get_resources_to_delete(resources, paths):
     resources_to_delete = [resource['id']
                            for resource
                            in sorted_resources
-                           if is_not_substring_of_path(resource["path"],
-                                                       paths)]
+                           if is_not_substring_of_paths(resource["path"],
+                                                        paths)]
     return resources_to_delete
 
 
@@ -205,7 +211,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    load_str = args.conf
+    configuration_path = args.conf
     script_directory = os.path.dirname(__file__)
     stage_name = args.publish or "dev"
     api_name = args.api_name
@@ -217,7 +223,7 @@ if __name__ == '__main__':
     if not access_key or not secret_key:
         raise Exception("Critical information is missing")
 
-    path_infos, config = get_config(load_str, script_directory)
+    path_infos, config = get_config(configuration_path, script_directory)
     application_root = config["x-application-root"]
 
     api_connection = ApiGatewayConnection()
@@ -259,8 +265,8 @@ if __name__ == '__main__':
             zip_path = "main.zip"
 
         with open(zip_path) as zip_file:
-            function_arn = upload("PAWS-{0}-{1}".format(api_name,
-                                                        function_name),
+            function_arn = upload("PAWS-{}-{}".format(api_name,
+                                                      function_name),
                                   zip_file,
                                   creds_arn,
                                   handler_name,
