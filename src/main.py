@@ -88,8 +88,7 @@ def create_resource_path(api_connection, api_id, path, resources):
 
 
 def is_not_substring_of_path(needle, haystack):
-    """returns false if the needle is a substring
-       of anything in the haystack
+    """returns false if anything in the haystack starts with the needle
 
     Args:
         needle (str): String to find in haystack
@@ -102,7 +101,7 @@ def is_not_substring_of_path(needle, haystack):
 
 
 def get_resources_to_delete(resources, paths):
-    """returns a list of all resources to delete
+    """returns a list of all resource ids to delete
 
     Args:
         resources (list(dict)): resources to compare to the paths
@@ -111,21 +110,19 @@ def get_resources_to_delete(resources, paths):
     Returns:
         list(str): list of ids of resources to remove
     """
+    # sorting the resources is a cheap way to delete them in order
     sorted_resources = sorted(resources,
                               key=lambda x: x["path"].count("/"), reverse=True)
     resources_to_delete = [resource['id']
                            for resource
                            in sorted_resources
-                           # is substring of path determines if the
-                           # current path is a substring of any of the other
-                           # paths passed in
                            if is_not_substring_of_path(resource["path"],
                                                        paths)]
     return resources_to_delete
 
 
 def prune_nonexistent_paths(api_connection, api_id, paths, resources):
-    """Deletes all paths that don't exist in paths from given api
+    """Deletes all paths that don't exist in resources from given api
 
     Args:
         api_connection (ApiGatewayConnection): api gateway client
@@ -188,108 +185,108 @@ def create_integration_request(api_id, parent_id, method,
         api_id, parent_id, method, gateway_function_arn,
         creds_arn, mapping_templates)
 
+if __name__ == '__main__':
 
-parser = ArgumentParser(description=str('deploy an api to AWS lambda '
-                                        'and API Gateway'))
-parser.add_argument(
-    "--conf", type=str, default=None, required=True,
-    help="YAML or JSON swagger config describing your API")
+    parser = ArgumentParser(description=str('deploy an api to AWS lambda '
+                                            'and API Gateway'))
+    parser.add_argument(
+        "--conf", type=str, default=None, required=True,
+        help="YAML or JSON swagger config describing your API")
 
-parser.add_argument("--publish", type=str, default=None,
-                    help="name of the stage to publish to (default:dev)")
+    parser.add_argument("--publish", type=str, default=None,
+                        help="name of the stage to publish to (default:dev)")
 
-api_group = parser.add_mutually_exclusive_group(required=True)
-api_group.add_argument(
-    "--api_id", type=str, help="the api you wish to update")
-api_group.add_argument("--api_name", type=str,
-                       help="name of the new api to create")
+    api_group = parser.add_mutually_exclusive_group(required=True)
+    api_group.add_argument(
+        "--api_id", type=str, help="the api you wish to update")
+    api_group.add_argument("--api_name", type=str,
+                           help="name of the new api to create")
 
-args = parser.parse_args()
+    args = parser.parse_args()
 
-load_str = args.conf
-script_directory = os.path.dirname(__file__)
-stage_name = args.publish or "dev"
-api_name = args.api_name
-api_id = args.api_id
+    load_str = args.conf
+    script_directory = os.path.dirname(__file__)
+    stage_name = args.publish or "dev"
+    api_name = args.api_name
+    api_id = args.api_id
 
-access_key = os.environ.get('AWS_ACCESS_KEY_ID')
-secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    access_key = os.environ.get('AWS_ACCESS_KEY_ID')
+    secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
-if not access_key or not secret_key:
-    raise Exception("Critical information is missing")
+    if not access_key or not secret_key:
+        raise Exception("Critical information is missing")
 
-path_infos, config = get_config(load_str, script_directory)
-application_root = config["x-application-root"]
+    path_infos, config = get_config(load_str, script_directory)
+    application_root = config["x-application-root"]
 
-api_connection = ApiGatewayConnection()
+    api_connection = ApiGatewayConnection()
 
-# shouldn't need a third case here, parser should catch it
-if api_name:
-    api_resp = api_connection.get_api_by_name(api_name)
-    if not api_resp:
-        api_resp = api_connection.create_api(api_name)
-elif api_id:
-    api_resp = api_connection.get_api(api_id)
-    api_name = api_resp["name"]
+    # shouldn't need a third case here, parser should catch it
+    if api_name:
+        api_resp = api_connection.get_api_by_name(api_name)
+        if not api_resp:
+            api_resp = api_connection.create_api(api_name)
+    elif api_id:
+        api_resp = api_connection.get_api(api_id)
+        api_name = api_resp["name"]
 
-api_id = api_resp["id"]
+    api_id = api_resp["id"]
 
-resources = api_connection.get_resources(api_id)['items']
+    resources = api_connection.get_resources(api_id)['items']
 
-resources = prune_nonexistent_paths(
-    api_connection, api_id, [x[0] for x in path_infos], resources)
+    resources = prune_nonexistent_paths(
+        api_connection, api_id, [x[0] for x in path_infos], resources)
 
+    for path_info in path_infos:
+        path = path_info[0]
+        zip_path = path_info[1]
+        function_name = path_info[2]
+        handler_name = path_info[3]
+        creds_arn = path_info[4]
+        method = path_info[5]
+        parameters = path_info[6]
+        status_code = 200
+        content_type = "application/json"
+        app_root = None
 
-for path_info in path_infos:
-    path = path_info[0]
-    zip_path = path_info[1]
-    function_name = path_info[2]
-    handler_name = path_info[3]
-    creds_arn = path_info[4]
-    method = path_info[5]
-    parameters = path_info[6]
-    status_code = 200
-    content_type = "application/json"
-    app_root = None
+        # package source code if we have it
+        if not zip_path:
+            app_root = application_root
+            if app_root[-1] != "/":
+                app_root += "/"
+            zipdir(app_root, "main.zip")
+            zip_path = "main.zip"
 
-    # package source code if we have it
-    if not zip_path:
-        app_root = application_root
-        if app_root[-1] != "/":
-            app_root += "/"
-        zipdir(app_root, "main.zip")
-        zip_path = "main.zip"
+        with open(zip_path) as zip_file:
+            function_arn = upload("PAWS-{0}-{1}".format(api_name,
+                                                        function_name),
+                                  zip_file,
+                                  creds_arn,
+                                  handler_name,
+                                  stage_name)
 
-    with open(zip_path) as zip_file:
-        function_arn = upload("PAWS-{0}-{1}".format(api_name, function_name),
-                              zip_file,
-                              creds_arn,
-                              handler_name,
-                              stage_name)
+        if app_root:
+            os.remove(zip_path)
 
-    if app_root:
-        os.remove(zip_path)
+        # todo:rebuild this string concat so that respects region
+        gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
+                                   '/2015-03-31/functions/{0}/invocations').format(
+            function_arn)
 
-    # todo:rebuild this string concat so that respects region
-    gateway_function_arn = str('arn:aws:apigateway:us-east-1:lambda:path'
-                               '/2015-03-31/functions/{0}/invocations').format(
-        function_arn)
+        parent_id, resources = create_resource_path(
+            api_connection, api_id, path, resources)
 
-    parent_id, resources = create_resource_path(
-        api_connection, api_id, path, resources)
+        api_connection.create_method(
+            api_id, parent_id, method)
 
-    api_connection.create_method(
-        api_id, parent_id, method)
+        create_integration_request(api_id, parent_id, method,
+                                   gateway_function_arn, creds_arn,
+                                   content_type, parameters)
 
-    create_integration_request(api_id, parent_id, method,
-                               gateway_function_arn, creds_arn, content_type,
-                               parameters)
+        api_connection.create_integration_response(
+            api_id, parent_id, method, status_code)
+        api_connection.create_method_response(
+            api_id, parent_id, method, status_code)
+        api_connection.create_deployment(api_id, stage_name)
 
-    api_connection.create_integration_response(
-        api_id, parent_id, method, status_code)
-    api_connection.create_method_response(
-        api_id, parent_id, method, status_code)
-    api_connection.create_deployment(api_id, stage_name)
-
-
-print("We worked on {0}".format(api_id))
+    print("We worked on {0}".format(api_id))
