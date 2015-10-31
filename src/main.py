@@ -289,6 +289,11 @@ if __name__ == '__main__':
             api_id, parent_id, method, status_code)
         api_connection.create_method_response(
             api_id, parent_id, method, status_code)
-        api_connection.create_deployment(api_id, stage_name)
+
+    api_connection.create_deployment(api_id, stage_name)
 
     print("We worked on {0}".format(api_id))
+    print(
+        "https://{0}.execute-api.us-east-1.amazonaws.com/{1}/".
+        format(api_id,
+               stage_name))
