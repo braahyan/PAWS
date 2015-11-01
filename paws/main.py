@@ -250,7 +250,8 @@ if __name__ == '__main__':
     secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
     if not access_key or not secret_key:
-        raise Exception("Critical information is missing")
+        raise Exception("Check your AWS_ACCESS_KEY_ID and "
+                        "AWS_SECRET_ACCESS_KEY environment variables")
 
     path_infos, config = get_config(configuration_path, script_directory)
     application_root = config["x-application-root"]
@@ -271,7 +272,11 @@ if __name__ == '__main__':
     resources = api_connection.get_resources(api_id)['items']
 
     resources = prune_nonexistent_paths(
-        api_connection, api_id, [x[0] for x in path_infos], resources)
+        api_connection,
+        api_id,
+        [x[0] for x in path_infos],
+        resources
+    )
 
     for path_info in path_infos:
         path = path_info.path_name
