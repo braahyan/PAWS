@@ -191,6 +191,36 @@ def create_integration_request(api_id, parent_id, method,
         creds_arn, mapping_templates)
 
 
+def package_and_upload_lambda(zip_path, api_name, function_name,
+                              creds_arn, stage_name):
+    # package source code if we have it
+    if not zip_path:
+        app_root = application_root
+        if app_root[-1] != "/":
+            app_root += "/"
+        zipdir(app_root, "main.zip")
+        zip_path = "main.zip"
+
+    with open(zip_path) as zip_file:
+        function_arn = upload("PAWS-{}-{}".format(api_name,
+                                                  function_name),
+                              zip_file,
+                              creds_arn,
+                              handler_name,
+                              stage_name)
+
+    if app_root:
+        os.remove(zip_path)
+
+    # todo:rebuild this string concat so that respects region
+    gateway_function_arn = str(
+        'arn:aws:apigateway:us-east-1:lambda:path'
+        '/2015-03-31/functions/{0}/invocations').format(
+        function_arn)
+
+    return gateway_function_arn
+
+
 if __name__ == '__main__':
 
     parser = ArgumentParser(description=str('deploy an api to AWS lambda '
@@ -254,30 +284,13 @@ if __name__ == '__main__':
         content_type = "application/json"
         app_root = None
 
-        # package source code if we have it
-        if not zip_path:
-            app_root = application_root
-            if app_root[-1] != "/":
-                app_root += "/"
-            zipdir(app_root, "main.zip")
-            zip_path = "main.zip"
-
-        with open(zip_path) as zip_file:
-            function_arn = upload("PAWS-{}-{}".format(api_name,
-                                                      function_name),
-                                  zip_file,
-                                  creds_arn,
-                                  handler_name,
-                                  stage_name)
-
-        if app_root:
-            os.remove(zip_path)
-
-        # todo:rebuild this string concat so that respects region
-        gateway_function_arn = str(
-            'arn:aws:apigateway:us-east-1:lambda:path'
-            '/2015-03-31/functions/{0}/invocations').format(
-            function_arn)
+        function_arn = package_and_upload_lambda(
+            zip_path,
+            api_name,
+            function_name,
+            creds_arn,
+            stage_name
+        )
 
         parent_id, resources = create_resource_path(
             api_connection,
@@ -286,13 +299,16 @@ if __name__ == '__main__':
             resources)
 
         api_connection.create_method(
-            api_id, parent_id, method)
+            api_id,
+            parent_id,
+            method
+        )
 
         create_integration_request(
             api_id,
             parent_id,
             method,
-            gateway_function_arn,
+            function_arn,
             creds_arn,
             content_type
         )
