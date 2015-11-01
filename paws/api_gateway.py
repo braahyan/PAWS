@@ -34,7 +34,9 @@ class ApiGatewayConnection:
 
     def delete_resource(self, api_id, resource_id):
         resp = self.client.delete_resource(
-            restApiId=api_id, resourceId=resource_id)
+            restApiId=api_id,
+            resourceId=resource_id
+        )
         return resp
 
     def create_resource(self, api_id, parent_id, path_part):
@@ -48,9 +50,11 @@ class ApiGatewayConnection:
     def create_method(self, api_id, resource_id, http_method):
         try:
             self.client.put_method(
-                restApiId=api_id, resourceId=resource_id,
+                restApiId=api_id,
+                resourceId=resource_id,
                 httpMethod=http_method,
-                authorizationType="none")
+                authorizationType="none"
+            )
             return True
         except Exception:
             return False
@@ -79,48 +83,62 @@ class ApiGatewayConnection:
                           cache_cluster_enabled=False,
                           cache_cluster_size="0.5"):
         response = self.client.create_deployment(
-            restApiId=api_id, stageName=stage_name)
+            restApiId=api_id,
+            stageName=stage_name
+        )
         return response
 
     def create_integration_response(self, api_id,
                                     resource_id, http_method, status_code):
 
-        url = str("/restapis/{0}/resources/{1}/methods/"
-                  "{2}/integration/responses/{3}").format(
-            api_id, resource_id, http_method.upper(), status_code)
-        return sign_request(self.access_key,
-                            self.secret_key,
-                            method="put",
-                            canonical_uri=url,
-                            request_body={
-                                "selectionPattern": None,
-                                "responseParameters": {
-                                },
-                                "responseTemplates": {
-                                    "application/json": ""
-                                }
-                            })
+        url = ("/restapis/{0}/resources/{1}/methods/{2}/"
+               "integration/responses/{3}").format(
+            api_id,
+            resource_id,
+            http_method.upper(),
+            status_code
+        )
+        return sign_request(
+            self.access_key,
+            self.secret_key,
+            method="put",
+            canonical_uri=url,
+            request_body={
+                "selectionPattern": None,
+                "responseParameters": {
+                },
+                "responseTemplates": {
+                    "application/json": ""
+                }
+            })
 
     def create_integration(self, api_id, resource_id,
                            http_method, uri, credentials,
                            content_mapping_templates=None):
         if not content_mapping_templates:
             content_mapping_templates = {}
-        url = str(
-            "/restapis/{0}/resources/"
-            "{1}/methods/{2}/integration"
-        ).format(api_id, resource_id, http_method.upper())
-        resp = sign_request(self.access_key,
-                            self.secret_key,
-                            canonical_uri=url, method='put', request_body={
-                                "type": "AWS",
-                                "httpMethod": "POST",
-                                "uri": uri,
-                                "credentials": credentials,
-                                "requestParameters": {
-                                },
-                                "requestTemplates": content_mapping_templates,
-                                "cacheNamespace": "none",
-                                "cacheKeyParameters": []
-                            })
+
+        url = "/restapis/{0}/resources/{1}/methods/{2}/integration".format(
+            api_id,
+            resource_id,
+            http_method.upper()
+        )
+
+        resp = sign_request(
+            self.access_key,
+            self.secret_key,
+            canonical_uri=url,
+            method='put',
+            request_body={
+                "type": "AWS",
+                "httpMethod": "POST",
+                "uri": uri,
+                "credentials": credentials,
+                "requestParameters": {
+                },
+                "requestTemplates": content_mapping_templates,
+                "cacheNamespace": "none",
+                "cacheKeyParameters": []
+            }
+        )
         return resp

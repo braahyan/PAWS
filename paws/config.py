@@ -1,6 +1,7 @@
 import json
 import yaml
 from jsonschema import validate
+from collections import namedtuple
 
 
 def validate_paws_spec(spec, schema_object):
@@ -36,11 +37,21 @@ def get_config(load_str, script_directory):
         for method in config["paths"][path_name].keys():
             method_info = config["paths"][path_name][method]
             path_infos.append(
-                [path_name,
-                 method_info.get("x-zip-path", None),
-                 method_info["operationId"],
-                 method_info["x-handler-name"],
-                 method_info["x-role-arn"],
-                 method.upper(),
-                 method_info["parameters"]])
+                PathConfiguartionEntry(path_name,
+                                       method_info.get("x-zip-path", None),
+                                       method_info["operationId"],
+                                       method_info["x-handler-name"],
+                                       method_info["x-role-arn"],
+                                       method.upper(),
+                                       method_info["parameters"]))
     return path_infos, config
+
+PathConfiguartionEntry = namedtuple("PathConfiguartionEntry", [
+    "path_name",
+    "zip_path",
+    "operation_name",
+    "handler_name",
+    "role_arn",
+    "http_method",
+    "parameters"
+])

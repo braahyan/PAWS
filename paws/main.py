@@ -182,8 +182,7 @@ def create_request_mapping_template():
 
 
 def create_integration_request(api_id, parent_id, method,
-                               gateway_function_arn, creds_arn, content_type,
-                               parameters):
+                               gateway_function_arn, creds_arn, content_type):
     mapping_templates = {}
     mapping_templates[content_type] = create_request_mapping_template()
 
@@ -245,13 +244,12 @@ if __name__ == '__main__':
         api_connection, api_id, [x[0] for x in path_infos], resources)
 
     for path_info in path_infos:
-        path = path_info[0]
-        zip_path = path_info[1]
-        function_name = path_info[2]
-        handler_name = path_info[3]
-        creds_arn = path_info[4]
-        method = path_info[5]
-        parameters = path_info[6]
+        path = path_info.path_name
+        zip_path = path_info.zip_path
+        function_name = path_info.operation_name
+        handler_name = path_info.handler_name
+        creds_arn = path_info.role_arn
+        method = path_info.http_method
         status_code = 200
         content_type = "application/json"
         app_root = None
@@ -282,19 +280,35 @@ if __name__ == '__main__':
             function_arn)
 
         parent_id, resources = create_resource_path(
-            api_connection, api_id, path, resources)
+            api_connection,
+            api_id,
+            path,
+            resources)
 
         api_connection.create_method(
             api_id, parent_id, method)
 
-        create_integration_request(api_id, parent_id, method,
-                                   gateway_function_arn, creds_arn,
-                                   content_type, parameters)
+        create_integration_request(
+            api_id,
+            parent_id,
+            method,
+            gateway_function_arn,
+            creds_arn,
+            content_type
+        )
 
         api_connection.create_integration_response(
-            api_id, parent_id, method, status_code)
+            api_id,
+            parent_id,
+            method,
+            status_code
+        )
         api_connection.create_method_response(
-            api_id, parent_id, method, status_code)
+            api_id,
+            parent_id,
+            method,
+            status_code
+        )
 
     api_connection.create_deployment(api_id, stage_name)
 
