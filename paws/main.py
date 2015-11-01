@@ -221,6 +221,44 @@ def package_and_upload_lambda(zip_path, api_name, function_name,
     return gateway_function_arn
 
 
+def configure_route(api_connection, api_id, path, method, function_arn,
+                    creds_arn, content_type, status_code, resources):
+    parent_id, resources = create_resource_path(
+        api_connection,
+        api_id,
+        path,
+        resources
+    )
+
+    api_connection.create_method(
+        api_id,
+        parent_id,
+        method
+    )
+
+    create_integration_request(
+        api_id,
+        parent_id,
+        method,
+        function_arn,
+        creds_arn,
+        content_type
+    )
+
+    api_connection.create_integration_response(
+        api_id,
+        parent_id,
+        method,
+        status_code
+    )
+    api_connection.create_method_response(
+        api_id,
+        parent_id,
+        method,
+        status_code
+    )
+
+
 if __name__ == '__main__':
 
     parser = ArgumentParser(description=str('deploy an api to AWS lambda '
@@ -297,38 +335,16 @@ if __name__ == '__main__':
             stage_name
         )
 
-        parent_id, resources = create_resource_path(
+        configure_route(
             api_connection,
             api_id,
             path,
-            resources)
-
-        api_connection.create_method(
-            api_id,
-            parent_id,
-            method
-        )
-
-        create_integration_request(
-            api_id,
-            parent_id,
             method,
             function_arn,
             creds_arn,
-            content_type
-        )
-
-        api_connection.create_integration_response(
-            api_id,
-            parent_id,
-            method,
-            status_code
-        )
-        api_connection.create_method_response(
-            api_id,
-            parent_id,
-            method,
-            status_code
+            content_type,
+            status_code,
+            resources
         )
 
     api_connection.create_deployment(api_id, stage_name)
