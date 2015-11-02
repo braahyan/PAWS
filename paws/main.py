@@ -101,7 +101,8 @@ def get_resources_to_delete(resources):
     Returns:
         list(str): list of ids of resources to remove
     """
-    resources_to_delete = [resource['id'] for resource in resources if
+    resources_to_delete = [(resource['id'], resource["path"])
+                           for resource in resources if
                            resource["path"].count("/") == 1 and
                            resource["path"] != "/"]
     return resources_to_delete
@@ -118,9 +119,9 @@ def prune_paths(api_connection, api_id, resources):
     resources = list(resources)
     resources_to_delete = get_resources_to_delete(resources)
     for resource_to_delete in resources_to_delete:
-        api_connection.delete_resource(api_id, resource_to_delete)
+        api_connection.delete_resource(api_id, resource_to_delete[0])
         resources = filter(
-            lambda x: x["id"] != resource_to_delete,
+            lambda x: not x["path"].startswith(resource_to_delete[1]),
             resources
         )
     return resources
@@ -206,6 +207,7 @@ def package_and_upload_lambda(zip_path, code_location, api_name, function_name,
 
 def configure_route(api_connection, api_id, path, method, function_arn,
                     creds_arn, content_type, status_code, resources):
+    print(path)
     parent_id, resources = create_resource_path(
         api_connection,
         api_id,
@@ -228,18 +230,21 @@ def configure_route(api_connection, api_id, path, method, function_arn,
         content_type
     )
 
-    api_connection.create_integration_response(
-        api_id,
-        parent_id,
-        method,
-        status_code
-    )
     api_connection.create_method_response(
         api_id,
         parent_id,
         method,
         status_code
     )
+
+    api_connection.create_integration_response(
+        api_id,
+        parent_id,
+        method,
+        status_code
+    )
+
+    return resources
 
 
 if __name__ == '__main__':
@@ -318,7 +323,7 @@ if __name__ == '__main__':
             stage_name
         )
 
-        configure_route(
+        resources = configure_route(
             api_connection,
             api_id,
             path,
