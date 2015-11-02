@@ -234,14 +234,29 @@ def configure_route(api_connection, api_id, path, method, function_arn,
         api_id,
         parent_id,
         method,
-        status_code
+        200
     )
 
     api_connection.create_integration_response(
         api_id,
         parent_id,
         method,
-        status_code
+        200
+    )
+
+    api_connection.create_method_response(
+        api_id,
+        parent_id,
+        method,
+        500
+    )
+
+    api_connection.create_integration_response(
+        api_id,
+        parent_id,
+        method,
+        500,
+        selection_pattern=".*error.*"
     )
 
     return resources

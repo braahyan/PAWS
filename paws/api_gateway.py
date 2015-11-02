@@ -89,7 +89,8 @@ class ApiGatewayConnection:
         return response
 
     def create_integration_response(self, api_id,
-                                    resource_id, http_method, status_code):
+                                    resource_id, http_method, status_code,
+                                    selection_pattern=None):
 
         url = ("/restapis/{0}/resources/{1}/methods/{2}/"
                "integration/responses/{3}").format(
@@ -104,7 +105,7 @@ class ApiGatewayConnection:
             method="put",
             canonical_uri=url,
             request_body={
-                "selectionPattern": None,
+                "selectionPattern": selection_pattern,
                 "responseParameters": {
                 },
                 "responseTemplates": {
