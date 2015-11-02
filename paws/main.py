@@ -16,7 +16,7 @@ def get_path_segments(path):
     Returns:
         list(str): list of path segments, in order
     """
-    parts = filter(None, path.split(os.sep))
+    parts = filter(None, path.split("/"))
     return parts
 
 
@@ -140,23 +140,24 @@ def create_integration_request(api_id, parent_id, method,
         creds_arn, mapping_templates)
 
 
-def package_and_upload_lambda(zip_path, api_name, function_name,
+def package_and_upload_lambda(zip_path, code_location, api_name, function_name,
                               creds_arn, stage_name):
     # package source code if we have it
     if not zip_path:
-        app_root = application_root
+        app_root = code_location
         if app_root[-1] != "/":
             app_root += "/"
         zipdir(app_root, "main.zip")
         zip_path = "main.zip"
 
     with open(zip_path) as zip_file:
-        function_arn = upload("PAWS-{}-{}".format(api_name,
-                                                  function_name),
-                              zip_file,
-                              creds_arn,
-                              handler_name,
-                              stage_name)
+        function_arn = upload(
+            "PAWS-{}-{}".format(api_name, function_name),
+            zip_file,
+            creds_arn,
+            handler_name,
+            stage_name
+        )
 
     if app_root:
         os.remove(zip_path)
