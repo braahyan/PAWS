@@ -35,38 +35,6 @@ def get_resource_by_path(path, resources):
         None)
 
 
-def get_resources_to_create(path, resources):
-    """gets the resources to create for this path
-
-    Args:
-        path (str): path to create
-        resources (list(str)): list of resources that have already been created
-
-    Returns:
-        (str, list(str)): the first item is a parent_id of the path to create,
-                          the second is a list of path segments to create, in
-                          order
-    """
-    cur_path = []
-    segments = get_path_segments(path)
-    parent_id = get_resource_by_path("/", resources)['id']
-
-    resources_to_create = []
-
-    for segment in segments:
-        cur_path.append(segment)
-
-        previous_created_resource = get_resource_by_path(
-            "/{}".format("/".join(cur_path)), resources)
-
-        if not previous_created_resource:
-            resources_to_create.append(segment)
-        else:
-            parent_id = previous_created_resource["id"]
-
-    return parent_id, resources_to_create
-
-
 def create_resource_path(api_connection, api_id, path, resources):
     """creates all resources necessary for a path
 
@@ -79,10 +47,10 @@ def create_resource_path(api_connection, api_id, path, resources):
         str: id of the resource that was created
     """
 
-    parent_id, resources_to_create = get_resources_to_create(
-        path, resources)
+    segments = get_path_segments(path)
+    parent_id = get_resource_by_path("/", resources)['id']
 
-    for segment in resources_to_create:
+    for segment in segments:
 
         response = api_connection.create_resource(
             api_id, parent_id, segment)
@@ -93,41 +61,22 @@ def create_resource_path(api_connection, api_id, path, resources):
     return parent_id, resources
 
 
-def is_not_substring_of_paths(needle, haystack):
-    """returns false if anything in the haystack starts with the needle
-
-    Args:
-        needle (str): String to find in haystack
-        haystack (list(str)): Collection to search through
-
-    Returns:
-        bool: Description
-    """
-    return not any(x.startswith(needle) for x in haystack)
-
-
-def get_resources_to_delete(resources, paths):
+def get_resources_to_delete(resources):
     """returns a list of all resource ids to delete
 
     Args:
         resources (list(dict)): resources to compare to the paths
-        paths (list(str)): paths from the config file
 
     Returns:
         list(str): list of ids of resources to remove
     """
-    # sorting the resources is a cheap way to delete them in order
-    sorted_resources = sorted(resources,
-                              key=lambda x: x["path"].count("/"), reverse=True)
-    resources_to_delete = [resource['id']
-                           for resource
-                           in sorted_resources
-                           if is_not_substring_of_paths(resource["path"],
-                                                        paths)]
+    resources_to_delete = [resource['id'] for resource in resources if
+                           resource["path"].count("/") == 1 and
+                           resource["path"] != "/"]
     return resources_to_delete
 
 
-def prune_nonexistent_paths(api_connection, api_id, paths, resources):
+def prune_paths(api_connection, api_id, resources):
     """Deletes all paths that don't exist in resources from given api
 
     Args:
@@ -136,7 +85,7 @@ def prune_nonexistent_paths(api_connection, api_id, paths, resources):
         paths (list(str)): list of paths from config
     """
     resources = list(resources)
-    resources_to_delete = get_resources_to_delete(resources, paths)
+    resources_to_delete = get_resources_to_delete(resources)
     for resource_to_delete in resources_to_delete:
         api_connection.delete_resource(api_id, resource_to_delete)
         resources = filter(
@@ -309,10 +258,9 @@ if __name__ == '__main__':
 
     resources = api_connection.get_resources(api_id)['items']
 
-    resources = prune_nonexistent_paths(
+    resources = prune_paths(
         api_connection,
         api_id,
-        [x[0] for x in path_infos],
         resources
     )
 
