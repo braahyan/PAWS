@@ -35,28 +35,59 @@ def get_resource_by_path(path, resources):
         None)
 
 
+def get_resources_to_create(path, resources):
+    """gets the resources to create for this path
+    Args:
+        path (str): path to create
+        resources (list(str)): list of resources that have already been created
+    Returns:
+        (str, list(str)): the first item is a parent_id of the path to create,
+                          the second is a list of path segments to create, in
+                          order
+    """
+    cur_path = "/"
+    segments = get_path_segments(path)
+    parent_id = get_resource_by_path("/", resources)['id']
+
+    resources_to_create = []
+
+    for segment in segments:
+        cur_path += segment
+
+        previous_created_resource = get_resource_by_path(cur_path, resources)
+
+        if not previous_created_resource:
+            resources_to_create.append(segment)
+        else:
+            parent_id = previous_created_resource["id"]
+        cur_path += "/"
+
+    return parent_id, resources_to_create
+
+
 def create_resource_path(api_connection, api_id, path, resources):
     """creates all resources necessary for a path
-
     Args:
         api_connection (ApiGatewayConnection): api gateway client
         api_id (str): id of the api to operate on
         path (str): path to create
-
     Returns:
         str: id of the resource that was created
     """
 
-    segments = get_path_segments(path)
-    parent_id = get_resource_by_path("/", resources)['id']
+    parent_id, resources_to_create = get_resources_to_create(
+        path, resources)
 
-    for segment in segments:
+    cur_path = "/"
+    for segment in resources_to_create:
+        cur_path += segment
 
         response = api_connection.create_resource(
             api_id, parent_id, segment)
         resources.append(response)
 
         parent_id = response["id"]
+        cur_path += "/"
 
     return parent_id, resources
 
@@ -89,7 +120,9 @@ def prune_paths(api_connection, api_id, resources):
     for resource_to_delete in resources_to_delete:
         api_connection.delete_resource(api_id, resource_to_delete)
         resources = filter(
-            lambda x: x["id"] != resource_to_delete, resources)
+            lambda x: x["id"] != resource_to_delete,
+            resources
+        )
     return resources
 
 
@@ -278,6 +311,7 @@ if __name__ == '__main__':
 
         function_arn = package_and_upload_lambda(
             zip_path,
+            application_root,
             api_name,
             function_name,
             creds_arn,
