@@ -1,4 +1,4 @@
-Pardon my mess, PAWS is still in heavy development.
+Pardon my mess, PAWS is dead, use [serverless](http://serverless.com) instead.
 
 
 ## Configuration
